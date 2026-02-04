@@ -480,6 +480,38 @@ object DyeTrackerCommands {
                     )
             )
         }
+
+        // Show archfiend dye rolls
+        data.archfiendDye?.let { dye ->
+            source.sendFeedback(
+                Text.literal("Archfiend Dye:")
+                    .formatted(Formatting.DARK_RED)
+            )
+            source.sendFeedback(
+                Text.literal("  High Class Dice: ")
+                    .formatted(Formatting.GRAY)
+                    .append(
+                        Text.literal("${dye.highClassDiceRolls} rolls")
+                            .formatted(Formatting.WHITE)
+                    )
+                    .append(
+                        Text.literal(" (1/666)")
+                            .formatted(Formatting.DARK_GRAY)
+                    )
+            )
+            source.sendFeedback(
+                Text.literal("  Archfiend Dice: ")
+                    .formatted(Formatting.GRAY)
+                    .append(
+                        Text.literal("${dye.archfiendDiceRolls} rolls")
+                            .formatted(Formatting.WHITE)
+                    )
+                    .append(
+                        Text.literal(" (1/6,600)")
+                            .formatted(Formatting.DARK_GRAY)
+                    )
+            )
+        }
     }
 
     /**
