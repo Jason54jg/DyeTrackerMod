@@ -29,6 +29,9 @@ object RngDataStore {
     @Volatile
     private var mineshaftPity: MineshaftPity? = null
 
+    @Volatile
+    private var archfiendDye: ArchfiendDyeData? = null
+
     private val listeners = CopyOnWriteArrayList<RngDataChangeListener>()
 
     @Volatile
@@ -56,6 +59,7 @@ object RngDataStore {
             nucleusMeter = loadedData.nucleusMeter
             experimentationMeter = loadedData.experimentationMeter
             mineshaftPity = loadedData.mineshaftPity
+            archfiendDye = loadedData.archfiendDye
 
             DyeTrackerMod.info("RNG data loaded from disk")
         }
@@ -173,6 +177,24 @@ object RngDataStore {
     }
 
     /**
+     * Increment the High Class Archfiend Dice roll count.
+     */
+    fun incrementHighClassDiceRoll() {
+        val current = archfiendDye ?: ArchfiendDyeData()
+        archfiendDye = current.copy(highClassDiceRolls = current.highClassDiceRolls + 1)
+        notifyListeners()
+    }
+
+    /**
+     * Increment the regular Archfiend Dice roll count.
+     */
+    fun incrementArchfiendDiceRoll() {
+        val current = archfiendDye ?: ArchfiendDyeData()
+        archfiendDye = current.copy(archfiendDiceRolls = current.archfiendDiceRolls + 1)
+        notifyListeners()
+    }
+
+    /**
      * Get an immutable snapshot of all RNG data.
      */
     fun getData(): PlayerRngData {
@@ -181,7 +203,8 @@ object RngDataStore {
             dungeonMeters = dungeonMeters.toMap(),
             nucleusMeter = nucleusMeter,
             experimentationMeter = experimentationMeter,
-            mineshaftPity = mineshaftPity
+            mineshaftPity = mineshaftPity,
+            archfiendDye = archfiendDye
         )
     }
 
@@ -194,6 +217,7 @@ object RngDataStore {
         nucleusMeter = null
         experimentationMeter = null
         mineshaftPity = null
+        archfiendDye = null
         notifyListeners()
     }
 

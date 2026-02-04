@@ -75,6 +75,16 @@ data class MineshaftPity(
 )
 
 /**
+ * Archfiend Dye roll tracking data.
+ * Tracks dice rolls for both High Class Archfiend Dice and regular Archfiend Dice.
+ */
+@Serializable
+data class ArchfiendDyeData(
+    val highClassDiceRolls: Int = 0,
+    val archfiendDiceRolls: Int = 0
+)
+
+/**
  * Composite data class holding all RNG data for a player.
  */
 @Serializable
@@ -83,7 +93,8 @@ data class PlayerRngData(
     val dungeonMeters: Map<DungeonFloor, DungeonRngMeter> = emptyMap(),
     val nucleusMeter: NucleusRngMeter? = null,
     val experimentationMeter: ExperimentationRngMeter? = null,
-    val mineshaftPity: MineshaftPity? = null
+    val mineshaftPity: MineshaftPity? = null,
+    val archfiendDye: ArchfiendDyeData? = null
 ) {
     /**
      * Returns true if any RNG data has been captured.
@@ -93,6 +104,7 @@ data class PlayerRngData(
             dungeonMeters.isNotEmpty() ||
             nucleusMeter != null ||
             experimentationMeter != null ||
-            mineshaftPity != null
+            mineshaftPity != null ||
+            archfiendDye != null
     }
 }

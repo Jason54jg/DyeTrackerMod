@@ -17,6 +17,10 @@ object ChatEventHandler {
     // Pattern to strip Minecraft formatting codes (§ followed by any character)
     private val FORMAT_CODE_PATTERN = Regex("""§.""")
 
+    // Archfiend Dice patterns - check High Class first (more specific pattern)
+    private val HIGH_CLASS_DICE_PATTERN = Regex("""Your High Class Archfiend Dice rolled a \d!""")
+    private val ARCHFIEND_DICE_PATTERN = Regex("""Your Archfiend Dice rolled a \d!""")
+
     // Slayer quest patterns - detect by mob type in the "Slay X Combat XP worth of..." message
     // Chat format is: "» Slay 2,400 Combat XP worth of Zombies."
     private val SLAYER_MOB_PATTERNS = mapOf(
@@ -48,6 +52,19 @@ object ChatEventHandler {
         val rawText = message.string
         // Strip Minecraft formatting codes (§X) before pattern matching
         val text = FORMAT_CODE_PATTERN.replace(rawText, "")
+
+        // Check for Archfiend Dice rolls - check High Class first (more specific pattern)
+        if (HIGH_CLASS_DICE_PATTERN.containsMatchIn(text)) {
+            RngDataStore.incrementHighClassDiceRoll()
+            DyeTrackerMod.debug("Detected High Class Archfiend Dice roll")
+            return
+        }
+
+        if (ARCHFIEND_DICE_PATTERN.containsMatchIn(text)) {
+            RngDataStore.incrementArchfiendDiceRoll()
+            DyeTrackerMod.debug("Detected Archfiend Dice roll")
+            return
+        }
 
         // Check for slayer quest start to track current slayer
         for ((slayerType, pattern) in SLAYER_MOB_PATTERNS) {
