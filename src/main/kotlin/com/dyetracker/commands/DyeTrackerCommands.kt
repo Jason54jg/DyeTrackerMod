@@ -512,6 +512,37 @@ object DyeTrackerCommands {
                     )
             )
         }
+
+        // Show copper dye visitor accepts
+        data.copperDye?.let { dye ->
+            source.sendFeedback(
+                Text.literal("Copper Dye:")
+                    .formatted(Formatting.GOLD)
+            )
+            // Display drop rates for each rarity tier
+            val dropRates = mapOf(
+                "UNCOMMON" to "1/100,000",
+                "RARE" to "1/20,000",
+                "LEGENDARY" to "1/4,000",
+                "MYTHIC" to "1/800",
+                "SPECIAL" to "1/500"
+            )
+            for ((rarity, count) in dye.visitorAccepts) {
+                val dropRate = dropRates[rarity.name] ?: "???"
+                source.sendFeedback(
+                    Text.literal("  ${rarity.name}: ")
+                        .formatted(Formatting.GRAY)
+                        .append(
+                            Text.literal("$count accepts")
+                                .formatted(Formatting.WHITE)
+                        )
+                        .append(
+                            Text.literal(" ($dropRate)")
+                                .formatted(Formatting.DARK_GRAY)
+                        )
+                )
+            }
+        }
     }
 
     /**

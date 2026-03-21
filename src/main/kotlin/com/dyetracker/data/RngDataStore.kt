@@ -32,6 +32,9 @@ object RngDataStore {
     @Volatile
     private var archfiendDye: ArchfiendDyeData? = null
 
+    @Volatile
+    private var copperDye: CopperDyeData? = null
+
     private val listeners = CopyOnWriteArrayList<RngDataChangeListener>()
 
     @Volatile
@@ -60,6 +63,7 @@ object RngDataStore {
             experimentationMeter = loadedData.experimentationMeter
             mineshaftPity = loadedData.mineshaftPity
             archfiendDye = loadedData.archfiendDye
+            copperDye = loadedData.copperDye
 
             DyeTrackerMod.info("RNG data loaded from disk")
         }
@@ -195,6 +199,18 @@ object RngDataStore {
     }
 
     /**
+     * Increment the visitor accept count for a specific rarity tier.
+     */
+    fun incrementVisitorAccept(rarity: VisitorRarity) {
+        val current = copperDye ?: CopperDyeData()
+        val currentCount = current.visitorAccepts[rarity] ?: 0
+        val updatedAccepts = current.visitorAccepts.toMutableMap()
+        updatedAccepts[rarity] = currentCount + 1
+        copperDye = current.copy(visitorAccepts = updatedAccepts)
+        notifyListeners()
+    }
+
+    /**
      * Get an immutable snapshot of all RNG data.
      */
     fun getData(): PlayerRngData {
@@ -204,7 +220,8 @@ object RngDataStore {
             nucleusMeter = nucleusMeter,
             experimentationMeter = experimentationMeter,
             mineshaftPity = mineshaftPity,
-            archfiendDye = archfiendDye
+            archfiendDye = archfiendDye,
+            copperDye = copperDye
         )
     }
 
@@ -218,6 +235,7 @@ object RngDataStore {
         experimentationMeter = null
         mineshaftPity = null
         archfiendDye = null
+        copperDye = null
         notifyListeners()
     }
 

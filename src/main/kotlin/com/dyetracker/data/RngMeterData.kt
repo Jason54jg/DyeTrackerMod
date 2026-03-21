@@ -85,6 +85,28 @@ data class ArchfiendDyeData(
 )
 
 /**
+ * Garden visitor rarity tiers.
+ * Each tier has different Copper Dye drop rates.
+ */
+@Serializable
+enum class VisitorRarity {
+    UNCOMMON,   // 1/100,000 drop rate
+    RARE,       // 1/20,000 drop rate
+    LEGENDARY,  // 1/4,000 drop rate
+    MYTHIC,     // 1/800 drop rate
+    SPECIAL     // 1/500 drop rate
+}
+
+/**
+ * Copper Dye tracking data.
+ * Tracks garden visitor offer acceptances by rarity tier.
+ */
+@Serializable
+data class CopperDyeData(
+    val visitorAccepts: Map<VisitorRarity, Int> = emptyMap()
+)
+
+/**
  * Composite data class holding all RNG data for a player.
  */
 @Serializable
@@ -94,7 +116,8 @@ data class PlayerRngData(
     val nucleusMeter: NucleusRngMeter? = null,
     val experimentationMeter: ExperimentationRngMeter? = null,
     val mineshaftPity: MineshaftPity? = null,
-    val archfiendDye: ArchfiendDyeData? = null
+    val archfiendDye: ArchfiendDyeData? = null,
+    val copperDye: CopperDyeData? = null
 ) {
     /**
      * Returns true if any RNG data has been captured.
@@ -105,6 +128,7 @@ data class PlayerRngData(
             nucleusMeter != null ||
             experimentationMeter != null ||
             mineshaftPity != null ||
-            archfiendDye != null
+            archfiendDye != null ||
+            copperDye != null
     }
 }

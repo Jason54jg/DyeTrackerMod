@@ -1,6 +1,7 @@
 package com.dyetracker.api
 
 import com.dyetracker.data.ArchfiendDyeData
+import com.dyetracker.data.CopperDyeData
 import com.dyetracker.data.DungeonFloor
 import com.dyetracker.data.DungeonRngMeter
 import com.dyetracker.data.ExperimentationRngMeter
@@ -21,6 +22,7 @@ data class SyncRngDataRequest(
     val experimentationMeter: ExperimentationRngMeter? = null,
     val mineshaftPity: MineshaftPity? = null,
     val archfiendDye: ArchfiendDyeData? = null,
+    val copperDye: CopperDyeData? = null,
     val modTimestamp: Long
 )
 
