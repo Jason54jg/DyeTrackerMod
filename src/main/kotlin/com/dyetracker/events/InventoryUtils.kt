@@ -13,6 +13,7 @@ sealed class InventoryType {
     data class DungeonRngMeter(val floor: DungeonFloor) : InventoryType()
     data object NucleusRngMeter : InventoryType()
     data object ExperimentationRngMeter : InventoryType()
+    data object Commissions : InventoryType()
 }
 
 /**
@@ -47,6 +48,15 @@ object InventoryUtils {
     private const val EXPERIMENTATION_TITLE = "Experimentation Table"
     private const val RNG_METER_SUFFIX = "RNG Meter"
 
+    // Commissions GUI title
+    private const val COMMISSIONS_TITLE = "Commissions"
+
+    // Commission Milestones item name
+    private const val COMMISSION_MILESTONES_ITEM = "Commission Milestones"
+
+    // Pattern to extract completed count from milestone lore (e.g., "208/250")
+    private val MILESTONE_COUNT_PATTERN = Regex("""(\d[\d,]*)/[\d,]+""")
+
     // Lore patterns - matches "31,900/75M" or "1,812/8.3k" format
     private val XP_PROGRESS_PATTERN = Regex("""([\d,.]+)/([\d,.]+[KkMm]?)""")
     // Matches "Stored Dungeon Score: 804" or "Stored Nucleus XP: 1,000"
@@ -58,6 +68,11 @@ object InventoryUtils {
      */
     fun detectInventoryType(title: String): InventoryType? {
         val cleanTitle = stripFormatting(title)
+
+        // Check for Commissions GUI
+        if (cleanTitle == COMMISSIONS_TITLE) {
+            return InventoryType.Commissions
+        }
 
         // Check for experimentation table first (uses "RNG" not "RNG Meter")
         if (cleanTitle.contains(EXPERIMENTATION_TITLE) && cleanTitle.contains("RNG")) {
@@ -205,6 +220,24 @@ object InventoryUtils {
             itemName = stripFormatting(name),
             goalXp = goalXp
         )
+    }
+
+    /**
+     * Check if an item is the "Commission Milestones" item and extract the total completed count.
+     * Parses lore for patterns like "208/250" where the first number is the total completed.
+     */
+    fun parseCommissionMilestoneCount(itemStack: ItemStack): Int? {
+        val name = stripFormatting(itemStack.name?.string ?: return null)
+        if (!name.contains(COMMISSION_MILESTONES_ITEM)) return null
+
+        val lore = getLore(itemStack)
+        for (line in lore) {
+            val cleanLine = stripFormatting(line.string)
+            val match = MILESTONE_COUNT_PATTERN.find(cleanLine) ?: continue
+            val countStr = match.groupValues[1].replace(",", "")
+            return countStr.toIntOrNull()
+        }
+        return null
     }
 
     /**

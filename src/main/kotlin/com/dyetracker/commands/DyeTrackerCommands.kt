@@ -513,6 +513,22 @@ object DyeTrackerCommands {
             )
         }
 
+        // Show nyanza dye commissions
+        data.nyanzaDye?.let { dye ->
+            source.sendFeedback(
+                Text.literal("Nyanza Dye: ")
+                    .formatted(Formatting.GREEN)
+                    .append(
+                        Text.literal("${formatXp(dye.commissionsCompleted.toLong())} commissions")
+                            .formatted(Formatting.WHITE)
+                    )
+                    .append(
+                        Text.literal(" (1/250,000)")
+                            .formatted(Formatting.DARK_GRAY)
+                    )
+            )
+        }
+
         // Show copper dye visitor accepts
         data.copperDye?.let { dye ->
             source.sendFeedback(

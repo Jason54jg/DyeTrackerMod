@@ -174,6 +174,7 @@ object ApiClient {
             mineshaftPity = data.mineshaftPity,
             archfiendDye = data.archfiendDye,
             copperDye = data.copperDye,
+            nyanzaDye = data.nyanzaDye,
             modTimestamp = System.currentTimeMillis()
         )
         val body = json.encodeToString(requestBody)

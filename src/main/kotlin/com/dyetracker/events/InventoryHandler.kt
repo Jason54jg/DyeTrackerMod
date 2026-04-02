@@ -63,6 +63,7 @@ object InventoryHandler {
             is InventoryType.DungeonRngMeter -> processDungeonMeter(screen, inventoryType.floor)
             is InventoryType.NucleusRngMeter -> processNucleusMeter(screen)
             is InventoryType.ExperimentationRngMeter -> processExperimentationMeter(screen)
+            is InventoryType.Commissions -> processCommissions(screen)
         }
     }
 
@@ -183,6 +184,28 @@ object InventoryHandler {
 
         RngDataStore.updateNucleusMeter(storedXp, selectedItem, goalXp)
         DyeTrackerMod.debug("Updated nucleus meter: xp={}, item={}", storedXp, selectedItem)
+    }
+
+    /**
+     * Process a Commissions inventory to capture the total commission count for Nyanza Dye.
+     * Scans for the "Commission Milestones" item and parses the total completed count from its lore.
+     */
+    private fun processCommissions(screen: HandledScreen<*>) {
+        val handler = screen.screenHandler
+
+        for (slot in handler.slots) {
+            val stack = slot.stack
+            if (stack.isEmpty) continue
+
+            val count = InventoryUtils.parseCommissionMilestoneCount(stack)
+            if (count != null) {
+                RngDataStore.updateCommissionsCompleted(count)
+                DyeTrackerMod.debug("Updated commission milestone count: {}", count)
+                return
+            }
+        }
+
+        DyeTrackerMod.debug("Commission Milestones item not found in Commissions GUI")
     }
 
     /**

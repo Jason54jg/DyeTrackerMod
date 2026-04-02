@@ -35,6 +35,9 @@ object RngDataStore {
     @Volatile
     private var copperDye: CopperDyeData? = null
 
+    @Volatile
+    private var nyanzaDye: NyanzaDyeData? = null
+
     private val listeners = CopyOnWriteArrayList<RngDataChangeListener>()
 
     @Volatile
@@ -64,6 +67,7 @@ object RngDataStore {
             mineshaftPity = loadedData.mineshaftPity
             archfiendDye = loadedData.archfiendDye
             copperDye = loadedData.copperDye
+            nyanzaDye = loadedData.nyanzaDye
 
             DyeTrackerMod.info("RNG data loaded from disk")
         }
@@ -211,6 +215,19 @@ object RngDataStore {
     }
 
     /**
+     * Update the total commissions completed count for Nyanza Dye.
+     * Only updates if the new value is higher than the current value (absolute count).
+     */
+    fun updateCommissionsCompleted(count: Int) {
+        val current = nyanzaDye
+        if (current != null && count <= current.commissionsCompleted) {
+            return
+        }
+        nyanzaDye = NyanzaDyeData(commissionsCompleted = count)
+        notifyListeners()
+    }
+
+    /**
      * Get an immutable snapshot of all RNG data.
      */
     fun getData(): PlayerRngData {
@@ -221,7 +238,8 @@ object RngDataStore {
             experimentationMeter = experimentationMeter,
             mineshaftPity = mineshaftPity,
             archfiendDye = archfiendDye,
-            copperDye = copperDye
+            copperDye = copperDye,
+            nyanzaDye = nyanzaDye
         )
     }
 
@@ -236,6 +254,7 @@ object RngDataStore {
         mineshaftPity = null
         archfiendDye = null
         copperDye = null
+        nyanzaDye = null
         notifyListeners()
     }
 

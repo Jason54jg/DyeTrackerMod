@@ -107,6 +107,15 @@ data class CopperDyeData(
 )
 
 /**
+ * Nyanza Dye tracking data.
+ * Tracks total mining commissions completed (absolute count from Commission Milestones).
+ */
+@Serializable
+data class NyanzaDyeData(
+    val commissionsCompleted: Int = 0
+)
+
+/**
  * Composite data class holding all RNG data for a player.
  */
 @Serializable
@@ -117,7 +126,8 @@ data class PlayerRngData(
     val experimentationMeter: ExperimentationRngMeter? = null,
     val mineshaftPity: MineshaftPity? = null,
     val archfiendDye: ArchfiendDyeData? = null,
-    val copperDye: CopperDyeData? = null
+    val copperDye: CopperDyeData? = null,
+    val nyanzaDye: NyanzaDyeData? = null
 ) {
     /**
      * Returns true if any RNG data has been captured.
@@ -129,6 +139,7 @@ data class PlayerRngData(
             experimentationMeter != null ||
             mineshaftPity != null ||
             archfiendDye != null ||
-            copperDye != null
+            copperDye != null ||
+            nyanzaDye != null
     }
 }
