@@ -64,6 +64,7 @@ object InventoryHandler {
             is InventoryType.NucleusRngMeter -> processNucleusMeter(screen)
             is InventoryType.ExperimentationRngMeter -> processExperimentationMeter(screen)
             is InventoryType.Commissions -> processCommissions(screen)
+            is InventoryType.VincentDyeCollection -> processVincentCollection(screen)
         }
     }
 
@@ -206,6 +207,21 @@ object InventoryHandler {
         }
 
         DyeTrackerMod.debug("Commission Milestones item not found in Commissions GUI")
+    }
+
+    /**
+     * Process Vincent NPC inventory to extract the player's dye collection.
+     */
+    private fun processVincentCollection(screen: HandledScreen<*>) {
+        val handler = screen.screenHandler
+        val dyes = InventoryUtils.extractDyeCollection(handler.slots)
+
+        if (dyes.isNotEmpty()) {
+            RngDataStore.updateDyeCollection(dyes)
+            DyeTrackerMod.info("Captured {} dyes from Vincent inventory", dyes.size)
+        } else {
+            DyeTrackerMod.debug("No dyes found in Vincent inventory")
+        }
     }
 
     /**

@@ -38,6 +38,9 @@ object RngDataStore {
     @Volatile
     private var nyanzaDye: NyanzaDyeData? = null
 
+    @Volatile
+    private var dyeCollection: DyeCollection? = null
+
     private val listeners = CopyOnWriteArrayList<RngDataChangeListener>()
 
     @Volatile
@@ -68,6 +71,7 @@ object RngDataStore {
             archfiendDye = loadedData.archfiendDye
             copperDye = loadedData.copperDye
             nyanzaDye = loadedData.nyanzaDye
+            dyeCollection = loadedData.dyeCollection
 
             DyeTrackerMod.info("RNG data loaded from disk")
         }
@@ -228,6 +232,24 @@ object RngDataStore {
     }
 
     /**
+     * Update the dye collection from a Vincent inventory scan.
+     * Replaces the entire collection with the latest scan results.
+     */
+    fun updateDyeCollection(dyes: List<DroppedDye>) {
+        dyeCollection = DyeCollection(
+            profileId = "", // Profile ID set during sync by SyncManager
+            dyes = dyes,
+            lastUpdated = System.currentTimeMillis()
+        )
+        notifyListeners()
+    }
+
+    /**
+     * Get the current dye collection snapshot.
+     */
+    fun getDyeCollection(): DyeCollection? = dyeCollection
+
+    /**
      * Get an immutable snapshot of all RNG data.
      */
     fun getData(): PlayerRngData {
@@ -239,7 +261,8 @@ object RngDataStore {
             mineshaftPity = mineshaftPity,
             archfiendDye = archfiendDye,
             copperDye = copperDye,
-            nyanzaDye = nyanzaDye
+            nyanzaDye = nyanzaDye,
+            dyeCollection = dyeCollection
         )
     }
 
@@ -255,6 +278,7 @@ object RngDataStore {
         archfiendDye = null
         copperDye = null
         nyanzaDye = null
+        dyeCollection = null
         notifyListeners()
     }
 

@@ -127,7 +127,8 @@ data class PlayerRngData(
     val mineshaftPity: MineshaftPity? = null,
     val archfiendDye: ArchfiendDyeData? = null,
     val copperDye: CopperDyeData? = null,
-    val nyanzaDye: NyanzaDyeData? = null
+    val nyanzaDye: NyanzaDyeData? = null,
+    val dyeCollection: DyeCollection? = null
 ) {
     /**
      * Returns true if any RNG data has been captured.
@@ -140,6 +141,7 @@ data class PlayerRngData(
             mineshaftPity != null ||
             archfiendDye != null ||
             copperDye != null ||
-            nyanzaDye != null
+            nyanzaDye != null ||
+            dyeCollection != null
     }
 }

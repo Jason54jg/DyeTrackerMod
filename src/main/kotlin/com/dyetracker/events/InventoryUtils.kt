@@ -1,5 +1,6 @@
 package com.dyetracker.events
 
+import com.dyetracker.data.DroppedDye
 import com.dyetracker.data.DungeonFloor
 import com.dyetracker.data.SlayerType
 import net.minecraft.item.ItemStack
@@ -14,6 +15,7 @@ sealed class InventoryType {
     data object NucleusRngMeter : InventoryType()
     data object ExperimentationRngMeter : InventoryType()
     data object Commissions : InventoryType()
+    data object VincentDyeCollection : InventoryType()
 }
 
 /**
@@ -48,6 +50,9 @@ object InventoryUtils {
     private const val EXPERIMENTATION_TITLE = "Experimentation Table"
     private const val RNG_METER_SUFFIX = "RNG Meter"
 
+    // Vincent dye collection GUI title
+    private const val VINCENT_TITLE = "Your Dyes"
+
     // Commissions GUI title
     private const val COMMISSIONS_TITLE = "Commissions"
 
@@ -68,6 +73,11 @@ object InventoryUtils {
      */
     fun detectInventoryType(title: String): InventoryType? {
         val cleanTitle = stripFormatting(title)
+
+        // Check for Vincent dye collection GUI
+        if (cleanTitle == VINCENT_TITLE) {
+            return InventoryType.VincentDyeCollection
+        }
 
         // Check for Commissions GUI
         if (cleanTitle == COMMISSIONS_TITLE) {
@@ -254,6 +264,133 @@ object InventoryUtils {
      */
     fun stripFormatting(text: String): String {
         return text.replace(Regex("§."), "")
+    }
+
+    // ==================== Vincent Dye Collection Parsing ====================
+
+    /**
+     * Map of display name (lowercased, without " Dye" suffix) to dye ID.
+     * Must match dye IDs from DYE_DEFINITIONS in packages/shared/src/constants/dyes.ts.
+     */
+    private val DYE_DISPLAY_NAME_TO_ID = mapOf(
+        "matcha" to "matcha",
+        "brick red" to "brick_red",
+        "celeste" to "celeste",
+        "byzantium" to "byzantium",
+        "flame" to "flame",
+        "sangria" to "sangria",
+        "livid" to "livid",
+        "necron" to "necron",
+        "jade" to "jade",
+        "nadeshiko" to "nadeshiko",
+        "tentacle" to "tentacle",
+        "aquamarine" to "aquamarine",
+        "archfiend" to "archfiend",
+        "bone" to "bone",
+        "carmine" to "carmine",
+        "celadon" to "celadon",
+        "copper" to "copper",
+        "cyclamen" to "cyclamen",
+        "dark purple" to "dark_purple",
+        "dung" to "dung",
+        "emerald" to "emerald",
+        "fossil" to "fossil",
+        "frostbitten" to "frostbitten",
+        "holly" to "holly",
+        "iceberg" to "iceberg",
+        "mango" to "mango",
+        "midnight" to "midnight",
+        "mocha" to "mocha",
+        "mythological" to "mythological",
+        "nyanza" to "nyanza",
+        "pearlescent" to "pearlescent",
+        "pelt" to "pelt",
+        "periwinkle" to "periwinkle",
+        "secret" to "secret",
+        "wild strawberry" to "wild_strawberry",
+        "bingo blue" to "bingo_blue",
+        "chocolate" to "chocolate",
+        "pure black" to "pure_black",
+        "pure white" to "pure_white",
+        "pure blue" to "pure_blue",
+        "pure yellow" to "pure_yellow"
+    )
+
+    /** Suffix appended to dye names in inventory items */
+    private const val DYE_ITEM_SUFFIX = " Dye"
+
+    /** Lore pattern for obtained timestamp (e.g., "Obtained: 12/25/25") */
+    private val OBTAINED_DATE_PATTERN = Regex("""Obtained:\s*(.+)""")
+
+    /**
+     * Parse a dye item from Vincent's inventory into a DroppedDye.
+     * Returns null if the item is not a recognized dye.
+     */
+    fun parseDyeItem(itemStack: ItemStack): DroppedDye? {
+        val rawName = itemStack.name?.string ?: return null
+        val cleanName = stripFormatting(rawName)
+
+        // Strip " Dye" suffix if present, then lowercase for lookup
+        val dyeName = if (cleanName.endsWith(DYE_ITEM_SUFFIX)) {
+            cleanName.dropLast(DYE_ITEM_SUFFIX.length)
+        } else {
+            cleanName
+        }
+
+        val dyeId = DYE_DISPLAY_NAME_TO_ID[dyeName.lowercase()] ?: return null
+
+        // Extract metadata from lore
+        val lore = getLore(itemStack)
+        var obtainedAt: Long? = null
+        val metadata = mutableMapOf<String, String>()
+
+        for (line in lore) {
+            val cleanLine = stripFormatting(line.string)
+
+            // Check for obtained date
+            val dateMatch = OBTAINED_DATE_PATTERN.find(cleanLine)
+            if (dateMatch != null) {
+                val dateStr = dateMatch.groupValues[1].trim()
+                metadata["obtainedDate"] = dateStr
+                // Note: obtainedAt as unix timestamp would require date parsing;
+                // store the raw string in metadata for now, leave obtainedAt null
+                // unless we can parse the date format reliably
+            }
+
+            // Capture any other non-empty, non-decorative lore lines as metadata
+            if (cleanLine.isNotBlank() && !cleanLine.startsWith("---") && cleanLine != cleanName) {
+                // Store rarity or other useful lore
+                if (cleanLine.contains("COSMETIC") || cleanLine.contains("SPECIAL") ||
+                    cleanLine.contains("LEGENDARY") || cleanLine.contains("RARE")
+                ) {
+                    metadata["rarity"] = cleanLine.trim()
+                }
+            }
+        }
+
+        return DroppedDye(
+            dyeId = dyeId,
+            obtainedAt = obtainedAt,
+            metadata = metadata.ifEmpty { null }
+        )
+    }
+
+    /**
+     * Extract all dye items from a Vincent inventory screen.
+     * Returns a list of DroppedDye for each recognized dye in the inventory.
+     */
+    fun extractDyeCollection(slots: Iterable<net.minecraft.screen.slot.Slot>): List<DroppedDye> {
+        val dyes = mutableListOf<DroppedDye>()
+        for (slot in slots) {
+            val stack = slot.stack
+            if (stack.isEmpty) continue
+
+            val dye = parseDyeItem(stack)
+            if (dye != null) {
+                dyes.add(dye)
+            }
+        }
+        return dyes
     }
 
     /**
