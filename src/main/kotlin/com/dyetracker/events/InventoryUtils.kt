@@ -373,8 +373,8 @@ object InventoryUtils {
             }
         }
 
-        // Only return a DroppedDye if the player has actually dropped this dye
-        if (droppedCount == 0) return null
+        // TODO: Restore this check once testing is complete
+        // if (droppedCount == 0) return null
 
         metadata["droppedCount"] = droppedCount.toString()
 
