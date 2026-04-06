@@ -373,8 +373,7 @@ object InventoryUtils {
             }
         }
 
-        // TODO: Restore this check once testing is complete
-        // if (droppedCount == 0) return null
+        if (droppedCount == 0) return null
 
         return DroppedDye(
             dyeId = dyeId,
