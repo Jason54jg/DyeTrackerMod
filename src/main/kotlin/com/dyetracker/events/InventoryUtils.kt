@@ -376,10 +376,9 @@ object InventoryUtils {
         // TODO: Restore this check once testing is complete
         // if (droppedCount == 0) return null
 
-        metadata["droppedCount"] = droppedCount.toString()
-
         return DroppedDye(
             dyeId = dyeId,
+            count = droppedCount,
             obtainedAt = null, // Compendium doesn't show timestamp
             metadata = metadata.ifEmpty { null }
         )

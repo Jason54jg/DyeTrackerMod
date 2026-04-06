@@ -9,6 +9,8 @@ import kotlinx.serialization.Serializable
 data class DroppedDye(
     /** Dye ID matching the website's dye constants (e.g., "matcha", "jade") */
     val dyeId: String,
+    /** Number of times the player has dropped this dye */
+    val count: Int = 0,
     /** Unix timestamp in ms when the dye was obtained, null if unknown */
     val obtainedAt: Long? = null,
     /** Additional metadata from item NBT, null if none */
