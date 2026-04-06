@@ -237,7 +237,7 @@ object RngDataStore {
      */
     fun updateDyeCollection(dyes: List<DroppedDye>) {
         dyeCollection = DyeCollection(
-            profileId = "", // Profile ID set during sync by SyncManager
+            profileId = "default", // TODO: detect active SkyBlock profile
             dyes = dyes,
             lastUpdated = System.currentTimeMillis()
         )
