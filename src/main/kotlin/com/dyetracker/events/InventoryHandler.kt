@@ -1,6 +1,7 @@
 package com.dyetracker.events
 
 import com.dyetracker.DyeTrackerMod
+import com.dyetracker.data.DroppedDye
 import com.dyetracker.data.DungeonFloor
 import com.dyetracker.data.RngDataStore
 import com.dyetracker.data.SlayerType
@@ -18,6 +19,12 @@ object InventoryHandler {
 
     // Delay in ticks before scanning inventory (allows GUI to fully load)
     private const val SCAN_DELAY_TICKS = 5
+
+    // How often to re-scan the Dye Compendium for page changes (in ticks)
+    private const val COMPENDIUM_SCAN_INTERVAL_TICKS = 10
+
+    // Accumulated dyes across all pages while the Dye Compendium is open
+    private val accumulatedDyes = mutableMapOf<String, DroppedDye>()
 
     /**
      * Register the screen event listener.
@@ -37,10 +44,15 @@ object InventoryHandler {
         val title = screen.title.string
         val inventoryType = InventoryUtils.detectInventoryType(title) ?: return
 
-        DyeTrackerMod.debug("Detected RNG meter inventory: {} ({})", title, inventoryType)
+        DyeTrackerMod.debug("Detected inventory: {} ({})", title, inventoryType)
 
-        // Schedule scan after a short delay to ensure inventory is loaded
-        scheduleScan(client, screen, inventoryType)
+        if (inventoryType is InventoryType.VincentDyeCollection) {
+            // Dye Compendium is paginated — scan continuously and accumulate
+            scheduleCompendiumScan(client, screen)
+        } else {
+            // Other inventory types: one-shot scan after delay
+            scheduleScan(client, screen, inventoryType)
+        }
     }
 
     private fun scheduleScan(client: MinecraftClient, screen: HandledScreen<*>, inventoryType: InventoryType) {
@@ -64,7 +76,7 @@ object InventoryHandler {
             is InventoryType.NucleusRngMeter -> processNucleusMeter(screen)
             is InventoryType.ExperimentationRngMeter -> processExperimentationMeter(screen)
             is InventoryType.Commissions -> processCommissions(screen)
-            is InventoryType.VincentDyeCollection -> processVincentCollection(screen)
+            is InventoryType.VincentDyeCollection -> {} // Handled by scheduleCompendiumScan
         }
     }
 
@@ -210,18 +222,57 @@ object InventoryHandler {
     }
 
     /**
-     * Process Vincent NPC inventory to extract the player's dye collection.
+     * Schedule continuous scanning of the Dye Compendium.
+     * Scans every COMPENDIUM_SCAN_INTERVAL_TICKS ticks to pick up page changes,
+     * accumulates dyes across pages, and finalizes when the screen closes.
      */
-    private fun processVincentCollection(screen: HandledScreen<*>) {
-        val handler = screen.screenHandler
-        val dyes = InventoryUtils.extractDyeCollection(handler.slots)
+    private fun scheduleCompendiumScan(client: MinecraftClient, screen: HandledScreen<*>) {
+        accumulatedDyes.clear()
+        var ticksSinceLastScan = SCAN_DELAY_TICKS // Start with initial delay worth of ticks
 
+        // Periodic scan while screen is open
+        ScreenEvents.afterTick(screen).register { _ ->
+            ticksSinceLastScan++
+            if (ticksSinceLastScan >= COMPENDIUM_SCAN_INTERVAL_TICKS) {
+                ticksSinceLastScan = 0
+                scanCompendiumPage(screen)
+            }
+        }
+
+        // Finalize when screen closes
+        ScreenEvents.remove(screen).register { _ ->
+            finalizeCompendium()
+        }
+    }
+
+    /**
+     * Scan the current page of the Dye Compendium and accumulate obtained dyes.
+     */
+    private fun scanCompendiumPage(screen: HandledScreen<*>) {
+        val handler = screen.screenHandler
+        val pageDyes = InventoryUtils.extractDyeCollection(handler.slots)
+
+        for (dye in pageDyes) {
+            if (!accumulatedDyes.containsKey(dye.dyeId)) {
+                accumulatedDyes[dye.dyeId] = dye
+                DyeTrackerMod.debug("Found obtained dye: {}", dye.dyeId)
+            }
+        }
+    }
+
+    /**
+     * Called when the Dye Compendium screen closes.
+     * Pushes all accumulated dyes to the data store.
+     */
+    private fun finalizeCompendium() {
+        val dyes = accumulatedDyes.values.toList()
         if (dyes.isNotEmpty()) {
             RngDataStore.updateDyeCollection(dyes)
-            DyeTrackerMod.info("Captured {} dyes from Vincent inventory", dyes.size)
+            DyeTrackerMod.info("Captured {} obtained dyes from Dye Compendium", dyes.size)
         } else {
-            DyeTrackerMod.debug("No dyes found in Vincent inventory")
+            DyeTrackerMod.debug("No obtained dyes found in Dye Compendium")
         }
+        accumulatedDyes.clear()
     }
 
     /**

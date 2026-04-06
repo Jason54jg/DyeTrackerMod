@@ -50,8 +50,8 @@ object InventoryUtils {
     private const val EXPERIMENTATION_TITLE = "Experimentation Table"
     private const val RNG_METER_SUFFIX = "RNG Meter"
 
-    // Vincent dye collection GUI title
-    private const val VINCENT_TITLE = "Your Dyes"
+    // Vincent dye compendium GUI title
+    private const val VINCENT_TITLE = "Dye Compendium"
 
     // Commissions GUI title
     private const val COMMISSIONS_TITLE = "Commissions"
@@ -319,12 +319,19 @@ object InventoryUtils {
     /** Suffix appended to dye names in inventory items */
     private const val DYE_ITEM_SUFFIX = " Dye"
 
-    /** Lore pattern for obtained timestamp (e.g., "Obtained: 12/25/25") */
-    private val OBTAINED_DATE_PATTERN = Regex("""Obtained:\s*(.+)""")
+    /** Lore pattern for player drop count (e.g., "You've dropped: 3") */
+    private val DROPPED_COUNT_PATTERN = Regex("""You've dropped:\s*(\d+)""")
+
+    /** Lore pattern for hex color (e.g., "Hex: #50C878") */
+    private val HEX_COLOR_PATTERN = Regex("""Hex:\s*(#[0-9A-Fa-f]{6})""")
+
+    /** Lore pattern for global drops (e.g., "Global drops: 438") */
+    private val GLOBAL_DROPS_PATTERN = Regex("""Global drops:\s*([\d,]+)""")
 
     /**
-     * Parse a dye item from Vincent's inventory into a DroppedDye.
-     * Returns null if the item is not a recognized dye.
+     * Parse a dye item from the Dye Compendium into a DroppedDye.
+     * Returns null if the item is not a recognized dye or if the player hasn't dropped it.
+     * Only returns a DroppedDye when "You've dropped: X" where X > 0.
      */
     fun parseDyeItem(itemStack: ItemStack): DroppedDye? {
         val rawName = itemStack.name?.string ?: return null
@@ -339,38 +346,41 @@ object InventoryUtils {
 
         val dyeId = DYE_DISPLAY_NAME_TO_ID[dyeName.lowercase()] ?: return null
 
-        // Extract metadata from lore
+        // Parse lore for drop count and metadata
         val lore = getLore(itemStack)
-        var obtainedAt: Long? = null
+        var droppedCount = 0
         val metadata = mutableMapOf<String, String>()
 
         for (line in lore) {
             val cleanLine = stripFormatting(line.string)
 
-            // Check for obtained date
-            val dateMatch = OBTAINED_DATE_PATTERN.find(cleanLine)
-            if (dateMatch != null) {
-                val dateStr = dateMatch.groupValues[1].trim()
-                metadata["obtainedDate"] = dateStr
-                // Note: obtainedAt as unix timestamp would require date parsing;
-                // store the raw string in metadata for now, leave obtainedAt null
-                // unless we can parse the date format reliably
+            // Check for player's drop count — this is the key field
+            val droppedMatch = DROPPED_COUNT_PATTERN.find(cleanLine)
+            if (droppedMatch != null) {
+                droppedCount = droppedMatch.groupValues[1].toIntOrNull() ?: 0
             }
 
-            // Capture any other non-empty, non-decorative lore lines as metadata
-            if (cleanLine.isNotBlank() && !cleanLine.startsWith("---") && cleanLine != cleanName) {
-                // Store rarity or other useful lore
-                if (cleanLine.contains("COSMETIC") || cleanLine.contains("SPECIAL") ||
-                    cleanLine.contains("LEGENDARY") || cleanLine.contains("RARE")
-                ) {
-                    metadata["rarity"] = cleanLine.trim()
-                }
+            // Capture hex color
+            val hexMatch = HEX_COLOR_PATTERN.find(cleanLine)
+            if (hexMatch != null) {
+                metadata["hex"] = hexMatch.groupValues[1]
+            }
+
+            // Capture global drops
+            val globalMatch = GLOBAL_DROPS_PATTERN.find(cleanLine)
+            if (globalMatch != null) {
+                metadata["globalDrops"] = globalMatch.groupValues[1].replace(",", "")
             }
         }
 
+        // Only return a DroppedDye if the player has actually dropped this dye
+        if (droppedCount == 0) return null
+
+        metadata["droppedCount"] = droppedCount.toString()
+
         return DroppedDye(
             dyeId = dyeId,
-            obtainedAt = obtainedAt,
+            obtainedAt = null, // Compendium doesn't show timestamp
             metadata = metadata.ifEmpty { null }
         )
     }
