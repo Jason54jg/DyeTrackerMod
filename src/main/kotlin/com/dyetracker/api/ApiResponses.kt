@@ -2,6 +2,7 @@ package com.dyetracker.api
 
 import com.dyetracker.data.ArchfiendDyeData
 import com.dyetracker.data.CopperDyeData
+import com.dyetracker.data.DroppedDye
 import com.dyetracker.data.DungeonFloor
 import com.dyetracker.data.NyanzaDyeData
 import com.dyetracker.data.DungeonRngMeter
@@ -75,4 +76,24 @@ data class SyncRngDataResponse(
     val success: Boolean,
     val uuid: String,
     val updatedAt: Long
+)
+
+/**
+ * Request body for POST /api/v1/dye-collection
+ */
+@Serializable
+data class SyncDyeCollectionRequest(
+    val profileId: String,
+    val dyes: List<DroppedDye>,
+    val modTimestamp: Long
+)
+
+/**
+ * Response from POST /api/v1/dye-collection
+ */
+@Serializable
+data class SyncDyeCollectionResponse(
+    val success: Boolean,
+    val uuid: String,
+    val syncedCount: Int
 )

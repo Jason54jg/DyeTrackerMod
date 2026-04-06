@@ -3,6 +3,7 @@ package com.dyetracker.sync
 import com.dyetracker.DyeTrackerMod
 import com.dyetracker.api.ApiClient
 import com.dyetracker.auth.AccountVerification
+import com.dyetracker.data.DyeCollection
 import com.dyetracker.data.PlayerRngData
 import com.dyetracker.data.RngDataChangeListener
 import java.util.concurrent.Executors
@@ -145,6 +146,9 @@ object SyncManager : RngDataChangeListener {
 
             when (apiResult) {
                 is ApiClient.ApiResult.Success -> {
+                    // Also sync dye collection if present
+                    syncDyeCollectionIfPresent(dataToSync.dyeCollection)
+
                     synchronized(syncLock) {
                         pendingData = null
                         lastSyncTime = System.currentTimeMillis()
@@ -169,6 +173,29 @@ object SyncManager : RngDataChangeListener {
             }
             DyeTrackerMod.error("Sync exception", e)
             SyncResult(false, "Network error: ${e.message}")
+        }
+    }
+
+    /**
+     * Sync dye collection to the backend if collection data is present.
+     * Called after successful RNG data sync to piggyback on the same debounce.
+     */
+    private fun syncDyeCollectionIfPresent(collection: DyeCollection?) {
+        if (collection == null || collection.dyes.isEmpty()) return
+
+        DyeTrackerMod.info("Syncing dye collection ({} dyes)...", collection.dyes.size)
+        try {
+            val result = ApiClient.syncDyeCollection(collection)
+            when (result) {
+                is ApiClient.ApiResult.Success -> {
+                    DyeTrackerMod.info("Dye collection synced: {} dyes", result.data.syncedCount)
+                }
+                is ApiClient.ApiResult.Error -> {
+                    DyeTrackerMod.warn("Dye collection sync failed: {}", result.message)
+                }
+            }
+        } catch (e: Exception) {
+            DyeTrackerMod.error("Dye collection sync exception", e)
         }
     }
 

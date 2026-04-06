@@ -2,6 +2,7 @@ package com.dyetracker.api
 
 import com.dyetracker.DyeTrackerMod
 import com.dyetracker.config.ConfigManager
+import com.dyetracker.data.DyeCollection
 import com.dyetracker.data.PlayerRngData
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -210,6 +211,55 @@ object ApiClient {
             }
         } catch (e: Exception) {
             DyeTrackerMod.error("syncRngData exception", e)
+            ApiResult.Error("Network error: ${e.message}")
+        }
+    }
+
+    /**
+     * Sync dye collection to the backend.
+     * Requires authentication.
+     */
+    fun syncDyeCollection(collection: DyeCollection): ApiResult<SyncDyeCollectionResponse> {
+        val url = "${ConfigManager.config.apiUrl}/api/v1/dye-collection"
+
+        val requestBody = SyncDyeCollectionRequest(
+            profileId = collection.profileId,
+            dyes = collection.dyes,
+            modTimestamp = collection.lastUpdated
+        )
+        val body = json.encodeToString(requestBody)
+
+        DyeTrackerMod.info("API: POST {} (syncing dye collection, {} dyes)", url, collection.dyes.size)
+
+        return try {
+            val authHeader = getAuthHeader()
+            if (authHeader == null) {
+                DyeTrackerMod.warn("syncDyeCollection: No auth token available")
+                return ApiResult.Error("Not authenticated", 401)
+            }
+
+            val request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Content-Type", CONTENT_TYPE_JSON)
+                .header(AUTH_HEADER, authHeader)
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .timeout(Duration.ofSeconds(30))
+                .build()
+
+            val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+            DyeTrackerMod.info("API: Response status={}", response.statusCode())
+
+            if (response.statusCode() == 200) {
+                val responseData = json.decodeFromString<SyncDyeCollectionResponse>(response.body())
+                DyeTrackerMod.info("API: syncDyeCollection success, syncedCount={}", responseData.syncedCount)
+                ApiResult.Success(responseData)
+            } else {
+                val error = parseError(response.body())
+                DyeTrackerMod.warn("syncDyeCollection failed: {} ({})", error, response.statusCode())
+                ApiResult.Error(error, response.statusCode())
+            }
+        } catch (e: Exception) {
+            DyeTrackerMod.error("syncDyeCollection exception", e)
             ApiResult.Error("Network error: ${e.message}")
         }
     }
