@@ -262,16 +262,25 @@ object InventoryHandler {
 
     /**
      * Called when the Dye Compendium screen closes.
-     * Pushes all accumulated dyes to the data store.
+     * Merges accumulated dyes with existing collection and pushes to the data store.
      */
     private fun finalizeCompendium() {
-        val dyes = accumulatedDyes.values.toList()
-        if (dyes.isNotEmpty()) {
-            RngDataStore.updateDyeCollection(dyes)
-            DyeTrackerMod.info("Captured {} obtained dyes from Dye Compendium", dyes.size)
-        } else {
+        if (accumulatedDyes.isEmpty()) {
             DyeTrackerMod.debug("No obtained dyes found in Dye Compendium")
+            return
         }
+
+        // Merge with existing collection so previous pages aren't lost
+        val existing = RngDataStore.getDyeCollection()
+        val merged = mutableMapOf<String, DroppedDye>()
+        existing?.dyes?.forEach { merged[it.dyeId] = it }
+        merged.putAll(accumulatedDyes) // New data overwrites old for same dye ID
+
+        RngDataStore.updateDyeCollection(merged.values.toList())
+        DyeTrackerMod.info(
+            "Dye Compendium: {} new dyes this session, {} total in collection",
+            accumulatedDyes.size, merged.size
+        )
         accumulatedDyes.clear()
     }
 
