@@ -237,7 +237,7 @@ object RngDataStore {
      */
     fun updateDyeCollection(dyes: List<DroppedDye>) {
         dyeCollection = DyeCollection(
-            profileId = "default", // TODO: detect active SkyBlock profile
+            profileId = "server-resolved", // Profile is resolved server-side by the API
             dyes = dyes,
             lastUpdated = System.currentTimeMillis()
         )
