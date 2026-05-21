@@ -6,9 +6,16 @@ import com.dyetracker.config.ConfigManager
 import com.dyetracker.data.DungeonFloor
 import com.dyetracker.data.RngDataStore
 import com.dyetracker.data.SlayerType
+import com.dyetracker.overlay.EditOverlaysScreen
+import com.dyetracker.overlay.OverlayAddPipeline
+import com.dyetracker.overlay.OverlayTextureManager
 import com.dyetracker.sync.SyncManager
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.StringArgumentType
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
@@ -23,6 +30,10 @@ import java.util.Date
  * Registers client-side commands for the DyeTracker mod.
  */
 object DyeTrackerCommands {
+
+    private const val GIF_URL_DISPLAY_MAX = 60
+    private const val GIF_URL_TRUNCATE_AT = 57
+    private val gifCommandScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
      * Register all commands via the ClientCommandRegistrationCallback.
@@ -89,11 +100,156 @@ object DyeTrackerCommands {
                             1
                         }
                 )
+                .then(
+                    ClientCommandManager.literal("gif")
+                        .then(
+                            ClientCommandManager.literal("add")
+                                .then(
+                                    ClientCommandManager.argument("url", StringArgumentType.greedyString())
+                                        .executes { context ->
+                                            val url = StringArgumentType.getString(context, "url")
+                                            handleGifAddCommand(context.source, url)
+                                            1
+                                        }
+                                )
+                                .executes { context ->
+                                    context.source.sendFeedback(
+                                        Text.literal("Usage: /dyetracker gif add <url>")
+                                            .formatted(Formatting.YELLOW)
+                                    )
+                                    1
+                                }
+                        )
+                        .then(
+                            ClientCommandManager.literal("list")
+                                .executes { context ->
+                                    handleGifListCommand(context.source)
+                                    1
+                                }
+                        )
+                        .then(
+                            ClientCommandManager.literal("remove")
+                                .then(
+                                    ClientCommandManager.argument("id", StringArgumentType.word())
+                                        .executes { context ->
+                                            val id = StringArgumentType.getString(context, "id")
+                                            handleGifRemoveCommand(context.source, id)
+                                            1
+                                        }
+                                )
+                                .executes { context ->
+                                    context.source.sendFeedback(
+                                        Text.literal("Usage: /dyetracker gif remove <id>")
+                                            .formatted(Formatting.YELLOW)
+                                    )
+                                    1
+                                }
+                        )
+                        .then(
+                            ClientCommandManager.literal("edit")
+                                .executes { context ->
+                                    handleGifEditCommand(context.source)
+                                    1
+                                }
+                        )
+                        .executes { context ->
+                            context.source.sendFeedback(
+                                Text.literal("Usage: /dyetracker gif <add|list|remove|edit>")
+                                    .formatted(Formatting.YELLOW)
+                            )
+                            1
+                        }
+                )
                 .executes { context ->
                     showHelp(context.source)
                     1
                 }
         )
+    }
+
+    private fun handleGifAddCommand(source: FabricClientCommandSource, rawUrl: String) {
+        if (rawUrl.trim().isEmpty()) {
+            source.sendFeedback(
+                Text.literal("Invalid URL.")
+                    .formatted(Formatting.RED)
+            )
+            return
+        }
+
+        source.sendFeedback(
+            Text.literal("Downloading…")
+                .formatted(Formatting.YELLOW)
+        )
+
+        gifCommandScope.launch {
+            // The pipeline handles download → decode → upload → addGif and surfaces a
+            // single human-readable failure string. We just translate the Outcome to chat.
+            val outcome = OverlayAddPipeline.addFromUrl(rawUrl)
+            postOnClient {
+                when (outcome) {
+                    is OverlayAddPipeline.Outcome.Success -> source.sendFeedback(
+                        Text.literal(
+                            "Added overlay '${outcome.id}' (${outcome.decoded.frames.size} frames, " +
+                                "${outcome.decoded.totalDurationMs}ms loop)"
+                        ).formatted(Formatting.GREEN)
+                    )
+                    is OverlayAddPipeline.Outcome.Failure -> source.sendFeedback(
+                        Text.literal(outcome.message).formatted(Formatting.RED)
+                    )
+                }
+            }
+        }
+    }
+
+    private fun handleGifListCommand(source: FabricClientCommandSource) {
+        val gifs = ConfigManager.config.gifs
+        if (gifs.isEmpty()) {
+            source.sendFeedback(
+                Text.literal("No overlays configured. Add one with /dyetracker gif add <url>")
+                    .formatted(Formatting.YELLOW)
+            )
+            return
+        }
+        for (gif in gifs) {
+            val truncatedUrl = if (gif.url.length > GIF_URL_DISPLAY_MAX) {
+                gif.url.take(GIF_URL_TRUNCATE_AT) + "..."
+            } else {
+                gif.url
+            }
+            val visibility = if (gif.visible) "visible" else "hidden"
+            source.sendFeedback(
+                Text.literal(
+                    "${gif.id}: $truncatedUrl @(${gif.x}, ${gif.y}) scale ${gif.scale} [$visibility]"
+                ).formatted(Formatting.GRAY)
+            )
+        }
+    }
+
+    private fun handleGifRemoveCommand(source: FabricClientCommandSource, id: String) {
+        if (!ConfigManager.removeGif(id)) {
+            source.sendFeedback(
+                Text.literal("No overlay with id '$id'.")
+                    .formatted(Formatting.RED)
+            )
+            return
+        }
+        OverlayTextureManager.release(id)
+        source.sendFeedback(
+            Text.literal("Removed overlay '$id'.")
+                .formatted(Formatting.GREEN)
+        )
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    private fun handleGifEditCommand(source: FabricClientCommandSource) {
+        // Brigadier client commands already execute on the render thread, so no marshal
+        // needed. The screen IS the feedback; no chat output here.
+        MinecraftClient.getInstance().setScreen(EditOverlaysScreen())
+    }
+
+    /** Marshal a callback onto the client thread so we never touch client APIs from IO. */
+    private fun postOnClient(block: () -> Unit) {
+        MinecraftClient.getInstance().execute(block)
     }
 
     private fun handleLinkCommand(source: FabricClientCommandSource, code: String) {
@@ -618,6 +774,14 @@ object DyeTrackerCommands {
                 .formatted(Formatting.YELLOW)
                 .append(
                     Text.literal(" - Reload config (debug)")
+                        .formatted(Formatting.GRAY)
+                )
+        )
+        source.sendFeedback(
+            Text.literal("  /dyetracker gif <add|list|remove|edit>")
+                .formatted(Formatting.YELLOW)
+                .append(
+                    Text.literal(" - Manage HUD image/GIF overlays")
                         .formatted(Formatting.GRAY)
                 )
         )
