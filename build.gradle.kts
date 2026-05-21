@@ -1,14 +1,15 @@
 plugins {
-    id("fabric-loom") version "1.11-SNAPSHOT"
+    id("dev.kikugie.stonecutter")
+    id("fabric-loom") version "1.16.2"
     id("org.jetbrains.kotlin.jvm") version "2.2.20"
     id("org.jetbrains.kotlin.plugin.serialization") version "2.2.20"
 }
 
-version = project.property("mod_version") as String
-group = project.property("maven_group") as String
+version = "${property("mod_version")}+${stonecutter.current.version}"
+group = property("maven_group") as String
 
 base {
-    archivesName.set(project.property("archives_base_name") as String)
+    archivesName.set(property("archives_base_name") as String)
 }
 
 repositories {
@@ -17,18 +18,24 @@ repositories {
 }
 
 dependencies {
-    // Minecraft and mappings
-    minecraft("com.mojang:minecraft:${project.property("minecraft_version")}")
-    mappings("net.fabricmc:yarn:${project.property("yarn_mappings")}:v2")
+    // Minecraft version comes from the active Stonecutter subproject name.
+    minecraft("com.mojang:minecraft:${stonecutter.current.version}")
+    mappings("net.fabricmc:yarn:${property("yarn_mappings")}:v2")
 
     // Fabric Loader
-    modImplementation("net.fabricmc:fabric-loader:${project.property("loader_version")}")
+    modImplementation("net.fabricmc:fabric-loader:${property("loader_version")}")
 
     // Fabric API
-    modImplementation("net.fabricmc.fabric-api:fabric-api:${project.property("fabric_version")}")
+    modImplementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_version")}")
 
     // Fabric Language Kotlin (includes kotlinx.serialization)
-    modImplementation("net.fabricmc:fabric-language-kotlin:${project.property("fabric_kotlin_version")}")
+    modImplementation("net.fabricmc:fabric-language-kotlin:${property("fabric_kotlin_version")}")
+}
+
+loom {
+    // Mandatory for the Stonecutter shared-source layout — without this, Loom expects
+    // fabric.mod.json under each version subproject's resources rather than the shared root.
+    fabricModJsonPath = rootProject.file("src/main/resources/fabric.mod.json")
 }
 
 tasks.processResources {

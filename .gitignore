@@ -18,3 +18,8 @@ Thumbs.db
 # Loom cache
 .fabric/
 run/
+
+# Stonecutter cache (safety net — most Stonecutter output lives under build/
+# which is already ignored, but some plugin versions write a top-level
+# .stonecutter/ cache outside build/. This pattern catches it at any depth.)
+**/.stonecutter/
