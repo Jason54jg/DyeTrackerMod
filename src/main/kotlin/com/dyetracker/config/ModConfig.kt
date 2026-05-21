@@ -1,5 +1,6 @@
 package com.dyetracker.config
 
+import com.dyetracker.overlay.GifOverlayConfig
 import kotlinx.serialization.Serializable
 
 /**
@@ -31,7 +32,12 @@ data class ModConfig(
      * The verified Minecraft username.
      * Set after successful account linking.
      */
-    val linkedUsername: String = ""
+    val linkedUsername: String = "",
+
+    /**
+     * Persisted GIF/image HUD overlays added by the player. See PBI-28.
+     */
+    val gifs: List<GifOverlayConfig> = emptyList()
 ) {
     companion object {
         const val DEFAULT_API_URL = "https://dye-tracker-api.seanwalsh4118-7a3.workers.dev"
