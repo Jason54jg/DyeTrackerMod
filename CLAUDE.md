@@ -4,6 +4,11 @@
 
 This mod is part of a private monorepo that includes a web frontend and backend. The mod directory is synced to a **public repository** for open-source distribution using `git subtree`.
 
+## Entry Points
+
+- `com.dyetracker.DyeTrackerMod` (`ModInitializer`, `main`): config + commands + sync handlers (common init).
+- `com.dyetracker.client.DyeTrackerModClient` (`ClientModInitializer`, `client`): HUD overlay renderer, `G` keybind, and startup re-hydration of persisted GIF overlays.
+
 ## Repository Setup
 
 - **Private monorepo**: Contains mod + frontend + backend (where you're working now)

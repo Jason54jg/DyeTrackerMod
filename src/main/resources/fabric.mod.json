@@ -18,6 +18,12 @@
         "adapter": "kotlin",
         "value": "com.dyetracker.DyeTrackerMod"
       }
+    ],
+    "client": [
+      {
+        "adapter": "kotlin",
+        "value": "com.dyetracker.client.DyeTrackerModClient"
+      }
     ]
   },
   "mixins": [],
