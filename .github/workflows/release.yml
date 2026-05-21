@@ -41,8 +41,13 @@ jobs:
           echo "tag=$VERSION" >> $GITHUB_OUTPUT
           echo "number=${VERSION#v}" >> $GITHUB_OUTPUT
 
-      - name: Build with version
-        run: ./gradlew build -Pmod_version=${{ steps.version.outputs.number }}
+      - name: Build all registered Minecraft versions
+        run: ./gradlew chiseledBuild -Pmod_version=${{ steps.version.outputs.number }}
+
+      - name: List produced jars
+        run: |
+          echo "Per-version jars produced by chiseledBuild:"
+          ls -la versions/*/build/libs/dyetracker-*.jar
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -52,5 +57,5 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            build/libs/*[!-sources].jar
+            versions/*/build/libs/dyetracker-*[!-sources].jar
           generate_release_notes: true
