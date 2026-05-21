@@ -64,6 +64,32 @@ These patterns should be in .gitignore or excluded from the public repo:
 
 ## Building the Mod
 
+The build is multi-version-managed via [Stonecutter](https://stonecutter.kikugie.dev/). A single shared `src/` tree is compiled against each Minecraft version registered in `settings.gradle.kts` (currently 1.21.10 and 1.21.11). Per-version dependency coordinates live under `versions/<mc-version>/gradle.properties`.
+
 ```bash
-./gradlew build
+# Build all registered versions (produces one jar per version)
+./gradlew chiseledBuild
+
+# Build a single version
+./gradlew :1.21.10:build
+./gradlew :1.21.11:build
+
+# Run a per-version dev client
+./gradlew :1.21.10:runClient
+./gradlew :1.21.11:runClient
 ```
+
+Per-version jars land at `versions/<mc-version>/build/libs/dyetracker-<modver>+<mc-version>.jar` (e.g. `versions/1.21.11/build/libs/dyetracker-1.1.0+1.21.11.jar`).
+
+Switch the active version (controls which preprocessor branches Stonecutter writes to disk in `src/`):
+
+```bash
+./gradlew "Set active project to 1.21.11"
+./gradlew "Reset active project"   # restore VCS version before committing
+```
+
+Always run `"Reset active project"` before committing to avoid Stonecutter rewriting `src/` files in the diff.
+
+### Adding a new Minecraft version
+
+See the public-facing instructions in `README.md` (section: "Adding a new Minecraft version"). Summary: create `versions/<new-ver>/gradle.properties`, add `"<new-ver>"` to `settings.gradle.kts`, run `:<new-ver>:build`, fix any source-level diff with `//? if >=<new-ver> { ... //?}` blocks or named swaps in `stonecutter.gradle.kts`.
