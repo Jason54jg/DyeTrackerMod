@@ -7,9 +7,11 @@ import com.dyetracker.data.PlayerRngData
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.net.URI
+import java.net.URLEncoder
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.charset.StandardCharsets
 import java.time.Duration
 
 /**
@@ -27,6 +29,9 @@ object ApiClient {
 
     private const val CONTENT_TYPE_JSON = "application/json"
     private const val AUTH_HEADER = "Authorization"
+
+    /** Per-request timeout for the read-side GET calls. */
+    private const val GET_REQUEST_TIMEOUT_SECONDS = 15L
 
     /**
      * Result of an API call.
@@ -138,7 +143,7 @@ object ApiClient {
                 .header("Content-Type", CONTENT_TYPE_JSON)
                 .withAuth()
                 .GET()
-                .timeout(Duration.ofSeconds(15))
+                .timeout(Duration.ofSeconds(GET_REQUEST_TIMEOUT_SECONDS))
                 .build()
 
             val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
@@ -263,6 +268,89 @@ object ApiClient {
             ApiResult.Error("Network error: ${e.message}")
         }
     }
+
+    /**
+     * Fetch per-dye progress for a profile from the public
+     * `GET /api/v1/player/:username/profile/:profileId/dyes` endpoint. No auth required: the
+     * backend resolves the username to a UUID and applies that account's saved stats + mod RNG
+     * overrides server-side, so a plain GET returns the linked player's own verified progress.
+     * Never throws — returns [ApiResult.Error] on non-200 / network failure.
+     */
+    fun fetchDyeProgress(username: String, profileId: String): ApiResult<DyeProgressResponse> {
+        val url = "${ConfigManager.config.apiUrl}/api/v1/player/" +
+            "${encodePathSegment(username)}/profile/${encodePathSegment(profileId)}/dyes"
+
+        DyeTrackerMod.info("API: GET {} (fetching dye progress)", url)
+
+        return try {
+            val request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Content-Type", CONTENT_TYPE_JSON)
+                .GET()
+                .timeout(Duration.ofSeconds(GET_REQUEST_TIMEOUT_SECONDS))
+                .build()
+
+            val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+            DyeTrackerMod.info("API: Response status={}", response.statusCode())
+
+            if (response.statusCode() == 200) {
+                val data = json.decodeFromString<DyeProgressResponse>(response.body())
+                DyeTrackerMod.info("API: fetchDyeProgress success, {} dye(s) for profile={}", data.dyes.size, profileId)
+                ApiResult.Success(data)
+            } else {
+                val error = parseError(response.body())
+                DyeTrackerMod.warn("fetchDyeProgress failed: {} ({})", error, response.statusCode())
+                ApiResult.Error(error, response.statusCode())
+            }
+        } catch (e: Exception) {
+            DyeTrackerMod.error("fetchDyeProgress exception", e)
+            ApiResult.Error("Network error: ${e.message}")
+        }
+    }
+
+    /**
+     * Fetch a player's SkyBlock profiles from the public `GET /api/v1/player/:username`
+     * endpoint, used to resolve a typed profile `cute_name` to the `profileId` the dyes
+     * endpoint requires. No auth required. Never throws — returns [ApiResult.Error] on
+     * non-200 / network failure.
+     */
+    fun fetchProfiles(username: String): ApiResult<PlayerProfilesResponse> {
+        val url = "${ConfigManager.config.apiUrl}/api/v1/player/${encodePathSegment(username)}"
+
+        DyeTrackerMod.info("API: GET {} (fetching profiles)", url)
+
+        return try {
+            val request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Content-Type", CONTENT_TYPE_JSON)
+                .GET()
+                .timeout(Duration.ofSeconds(GET_REQUEST_TIMEOUT_SECONDS))
+                .build()
+
+            val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+            DyeTrackerMod.info("API: Response status={}", response.statusCode())
+
+            if (response.statusCode() == 200) {
+                val data = json.decodeFromString<PlayerProfilesResponse>(response.body())
+                DyeTrackerMod.info("API: fetchProfiles success, {} profile(s) for user={}", data.profiles.size, data.username)
+                ApiResult.Success(data)
+            } else {
+                val error = parseError(response.body())
+                DyeTrackerMod.warn("fetchProfiles failed: {} ({})", error, response.statusCode())
+                ApiResult.Error(error, response.statusCode())
+            }
+        } catch (e: Exception) {
+            DyeTrackerMod.error("fetchProfiles exception", e)
+            ApiResult.Error("Network error: ${e.message}")
+        }
+    }
+
+    /**
+     * URL-encode a single path segment. [URLEncoder] targets query strings (space → `+`), so
+     * `+` is rewritten to `%20` for correct path-segment semantics.
+     */
+    private fun encodePathSegment(segment: String): String =
+        URLEncoder.encode(segment, StandardCharsets.UTF_8).replace("+", "%20")
 
     private fun parseError(body: String): String {
         return try {

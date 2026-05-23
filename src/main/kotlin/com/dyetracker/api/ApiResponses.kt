@@ -11,6 +11,7 @@ import com.dyetracker.data.MineshaftPity
 import com.dyetracker.data.NucleusRngMeter
 import com.dyetracker.data.SlayerRngMeter
 import com.dyetracker.data.SlayerType
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
@@ -96,4 +97,58 @@ data class SyncDyeCollectionResponse(
     val success: Boolean,
     val uuid: String,
     val syncedCount: Int
+)
+
+/**
+ * A profile id + its human-readable name (`cute_name` in the backend JSON, e.g. "Mango").
+ * Used both standalone in [PlayerProfilesResponse] and as the `profile` field of
+ * [DyeProgressResponse].
+ */
+@Serializable
+data class ProfileSummary(
+    val id: String,
+    @SerialName("cute_name") val cuteName: String
+)
+
+/**
+ * One dye's progress entry from `GET /api/v1/player/:username/profile/:profileId/dyes`.
+ * Decodes only the fields the in-game single-dye widget needs; the client's
+ * `ignoreUnknownKeys` Json tolerates the rest. `progress` is null for untrackable dyes.
+ * Optional/absent fields default so a missing key never fails decoding.
+ */
+@Serializable
+data class DyeProgressEntry(
+    val dyeId: String,
+    val name: String,
+    val color: String,
+    val category: String,
+    val progress: Double? = null,
+    val trackable: Boolean = false,
+    val formula: String? = null,
+    val source: String? = null,
+    val isVerified: Boolean = false
+)
+
+/**
+ * Response from `GET /api/v1/player/:username/profile/:profileId/dyes` (public endpoint).
+ * `modSyncTimestamp` is null when the player has no mod-synced data for the profile.
+ */
+@Serializable
+data class DyeProgressResponse(
+    val username: String,
+    val profile: ProfileSummary,
+    val dyes: List<DyeProgressEntry>,
+    val modSyncTimestamp: Long? = null
+)
+
+/**
+ * Response from `GET /api/v1/player/:username` (public endpoint): the player's SkyBlock
+ * profiles, used to resolve a typed profile `cute_name` to the `profileId` the dyes endpoint
+ * requires.
+ */
+@Serializable
+data class PlayerProfilesResponse(
+    val uuid: String,
+    val username: String,
+    val profiles: List<ProfileSummary>
 )
