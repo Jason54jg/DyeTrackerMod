@@ -72,6 +72,18 @@ object DyeSprites {
         "pure_white",
         "pure_blue",
         "pure_yellow",
+        // Animated Fire-Sale dyes (PBI 33). Kept in lock-step with DYE_DISPLAY_NAME_TO_ID.
+        "aurora",
+        "black_ice",
+        "lava",
+        "lucky",
+        "ocean",
+        "pastel_sky",
+        "portal",
+        "rose",
+        "snowflake",
+        "treasure",
+        "warden",
     )
 
     /** True if a bundled sprite exists for [dyeId]. */

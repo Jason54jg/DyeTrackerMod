@@ -327,14 +327,44 @@ object InventoryUtils {
         "pure black" to "pure_black",
         "pure white" to "pure_white",
         "pure blue" to "pure_blue",
-        "pure yellow" to "pure_yellow"
+        "pure yellow" to "pure_yellow",
+        // Animated Fire-Sale dyes (PBI 33). Kept in lock-step with DyeSprites.DYE_IDS.
+        "aurora" to "aurora",
+        "black ice" to "black_ice",
+        "lava" to "lava",
+        "lucky" to "lucky",
+        "ocean" to "ocean",
+        "pastel sky" to "pastel_sky",
+        "portal" to "portal",
+        "rose" to "rose",
+        "snowflake" to "snowflake",
+        "treasure" to "treasure",
+        "warden" to "warden"
     )
+
+    /**
+     * The dye IDs the compendium/rotation parser can resolve (values of [DYE_DISPLAY_NAME_TO_ID]).
+     * Exposed for the drift-guard test that keeps the name map, [com.dyetracker.rotation.DyeSprites]
+     * IDs, and bundled PNGs in lock-step.
+     */
+    fun dyeDisplayNameToIdValues(): Collection<String> = DYE_DISPLAY_NAME_TO_ID.values
 
     /** Suffix appended to dye names in inventory items */
     private const val DYE_ITEM_SUFFIX = " Dye"
 
     /** Lore pattern for player drop count (e.g., "You've dropped: 3") */
     private val DROPPED_COUNT_PATTERN = Regex("""You've dropped:\s*(\d+)""")
+
+    /** Lore pattern for player shop-purchase count (e.g., "You've bought: 5") */
+    private val BOUGHT_COUNT_PATTERN = Regex("""You've bought:\s*(\d+)""")
+
+    /**
+     * All lore patterns that indicate the player owns a dye. A dye is captured when ANY of these
+     * yields a count > 0; the stored count is the max across them. RNG dyes use "You've dropped:",
+     * shop/Fire-Sale dyes (chocolate, pure dyes, animated dyes) use "You've bought:". No
+     * dropped-vs-bought source distinction is recorded.
+     */
+    private val OWNED_COUNT_PATTERNS = listOf(DROPPED_COUNT_PATTERN, BOUGHT_COUNT_PATTERN)
 
     /** Lore pattern for hex color (e.g., "Hex: #50C878") */
     private val HEX_COLOR_PATTERN = Regex("""Hex:\s*(#[0-9A-Fa-f]{6})""")
@@ -367,27 +397,39 @@ object InventoryUtils {
     }
 
     /**
+     * Extract the player's ownership count for a dye from its already-stripped lore lines.
+     *
+     * Pure (no Minecraft types) so it can be unit-tested. Returns the max count across every
+     * pattern in [OWNED_COUNT_PATTERNS] ("You've dropped:" / "You've bought:"), or 0 if none match.
+     * A return value > 0 means the player owns the dye (RNG-dropped or shop-bought).
+     */
+    fun extractOwnedCount(loreLines: List<String>): Int {
+        var maxCount = 0
+        for (line in loreLines) {
+            for (pattern in OWNED_COUNT_PATTERNS) {
+                val match = pattern.find(line) ?: continue
+                val count = match.groupValues[1].toIntOrNull() ?: continue
+                if (count > maxCount) maxCount = count
+            }
+        }
+        return maxCount
+    }
+
+    /**
      * Parse a dye item from the Dye Compendium into a DroppedDye.
-     * Returns null if the item is not a recognized dye or if the player hasn't dropped it.
-     * Only returns a DroppedDye when "You've dropped: X" where X > 0.
+     * Returns null if the item is not a recognized dye or if the player does not own it.
+     * A dye is captured when it has any ownership count > 0 ("You've dropped:" OR "You've bought:");
+     * the stored [DroppedDye.count] is that owned count (bought count for purchase dyes).
      */
     fun parseDyeItem(itemStack: ItemStack): DroppedDye? {
         val dyeId = resolveDyeId(itemStack) ?: return null
 
-        // Parse lore for drop count and metadata
-        val lore = getLore(itemStack)
-        var droppedCount = 0
+        // Strip formatting once, then derive ownership count + metadata from the clean lines.
+        val cleanLines = getLore(itemStack).map { stripFormatting(it.string) }
+        val ownedCount = extractOwnedCount(cleanLines)
+
         val metadata = mutableMapOf<String, String>()
-
-        for (line in lore) {
-            val cleanLine = stripFormatting(line.string)
-
-            // Check for player's drop count — this is the key field
-            val droppedMatch = DROPPED_COUNT_PATTERN.find(cleanLine)
-            if (droppedMatch != null) {
-                droppedCount = droppedMatch.groupValues[1].toIntOrNull() ?: 0
-            }
-
+        for (cleanLine in cleanLines) {
             // Capture hex color
             val hexMatch = HEX_COLOR_PATTERN.find(cleanLine)
             if (hexMatch != null) {
@@ -401,11 +443,11 @@ object InventoryUtils {
             }
         }
 
-        if (droppedCount == 0) return null
+        if (ownedCount == 0) return null
 
         return DroppedDye(
             dyeId = dyeId,
-            count = droppedCount,
+            count = ownedCount,
             obtainedAt = null, // Compendium doesn't show timestamp
             metadata = metadata.ifEmpty { null }
         )

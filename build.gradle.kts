@@ -30,6 +30,17 @@ dependencies {
 
     // Fabric Language Kotlin (includes kotlinx.serialization)
     modImplementation("net.fabricmc:fabric-language-kotlin:${property("fabric_kotlin_version")}")
+
+    // Unit testing (pure JVM; no Minecraft/Fabric runtime).
+    // See docs/delivery/33/33-2-junit-guide.md for rationale and coordinates.
+    testImplementation(platform("org.junit:junit-bom:5.14.3"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation(kotlin("test"))
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 loom {

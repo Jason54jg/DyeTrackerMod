@@ -106,6 +106,18 @@ The build is multi-version-managed via [Stonecutter](https://stonecutter.kikugie
 
 Per-version jars land at `versions/<mc-version>/build/libs/dyetracker-<modver>+<mc-version>.jar` (e.g. `versions/1.21.11/build/libs/dyetracker-1.1.0+1.21.11.jar`).
 
+### Running unit tests
+
+Pure-JVM unit tests (JUnit 5 + kotlin-test) live in the shared `src/test/kotlin/` tree. Run them
+against a registered version subproject (there is no root `test` task):
+
+```bash
+./gradlew :1.21.10:test
+./gradlew :1.21.11:test
+```
+
+See `docs/delivery/33/33-2-junit-guide.md` for the wiring rationale.
+
 Switch the active version (controls which preprocessor branches Stonecutter writes to disk in `src/`):
 
 ```bash
