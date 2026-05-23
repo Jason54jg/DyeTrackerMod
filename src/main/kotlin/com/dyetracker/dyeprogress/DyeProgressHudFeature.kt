@@ -10,7 +10,8 @@ import com.dyetracker.ui.hud.HudWidgetRegistry
  * that maps the live [ConfigManager.dyeProgressPlacements] list to one [HudWidgetEntry] per
  * widget each frame: the composed tree from [DyeProgressWidgetView] (reading live data from
  * [DyeProgressStore]) plus [DyeProgressPlacementEditor] so the shared edit screen can
- * move/scale/hide/remove it. Evaluated per frame, so adds/removes/edits reflect immediately.
+ * move/scale/hide/remove it and [DyeProgressConfigPanel] so it can configure pieces. Evaluated
+ * per frame, so adds/removes/edits/toggles reflect immediately.
  *
  * The in-screen "+ Add dye" panel ([DyeProgressAddAction]) is contributed to the edit screen
  * here as well.
@@ -23,7 +24,12 @@ object DyeProgressHudFeature {
             ConfigManager.dyeProgressPlacements.all().map { cfg ->
                 val status = DyeProgressStore.status(cfg.profileId)
                 val entry = DyeProgressStore.entry(cfg.profileId, cfg.dyeId)
-                HudWidgetEntry(cfg, DyeProgressWidgetView.build(cfg, status, entry), DyeProgressPlacementEditor)
+                HudWidgetEntry(
+                    cfg,
+                    DyeProgressWidgetView.build(cfg, status, entry),
+                    DyeProgressPlacementEditor,
+                    DyeProgressConfigPanel,
+                )
             }
         }
         EditScreenActionRegistry.register(DyeProgressAddAction)
