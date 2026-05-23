@@ -6,6 +6,8 @@ import com.dyetracker.overlay.GifOverlayConfig
 import com.dyetracker.overlay.GifHudFeature
 import com.dyetracker.overlay.OverlayDecoder
 import com.dyetracker.overlay.OverlayDownloader
+import com.dyetracker.rotation.DyeSpriteLoader
+import com.dyetracker.rotation.RotationHudFeature
 import com.dyetracker.ui.edit.EditModeKeybind
 import com.dyetracker.ui.hud.HudWidgetHost
 import com.dyetracker.ui.texture.ImageTextureManager
@@ -41,6 +43,8 @@ class DyeTrackerModClient : ClientModInitializer {
     override fun onInitializeClient() {
         HudWidgetHost.register()
         GifHudFeature.register()
+        DyeSpriteLoader.register()
+        RotationHudFeature.register()
         EditModeKeybind.register()
 
         ClientLifecycleEvents.CLIENT_STARTED.register { _ -> loadConfiguredOverlays() }

@@ -1,6 +1,7 @@
 package com.dyetracker.events
 
 import com.dyetracker.DyeTrackerMod
+import com.dyetracker.config.ConfigManager
 import com.dyetracker.data.DroppedDye
 import com.dyetracker.data.DungeonFloor
 import com.dyetracker.data.RngDataStore
@@ -10,6 +11,8 @@ import net.minecraft.client.MinecraftClient
 import net.minecraft.client.gui.screen.Screen
 import net.minecraft.client.gui.screen.ingame.HandledScreen
 import net.minecraft.screen.slot.Slot
+import net.minecraft.text.Text
+import net.minecraft.util.Formatting
 
 /**
  * Handles inventory screen events to capture RNG meter data.
@@ -76,8 +79,34 @@ object InventoryHandler {
             is InventoryType.NucleusRngMeter -> processNucleusMeter(screen)
             is InventoryType.ExperimentationRngMeter -> processExperimentationMeter(screen)
             is InventoryType.Commissions -> processCommissions(screen)
+            is InventoryType.VincentDyeRotation -> processDyeRotation(screen)
             is InventoryType.VincentDyeCollection -> {} // Handled by scheduleCompendiumScan
         }
+    }
+
+    /**
+     * Process the Vincent "Dyes" current-rotation screen: parse the container's dye slots into a
+     * [com.dyetracker.data.DyeRotation], persist it (last-write-wins) and notify the player. Skips
+     * persistence when no dyes were parsed so a half-loaded or mis-identified screen never clobbers
+     * the last-known rotation.
+     */
+    private fun processDyeRotation(screen: HandledScreen<*>) {
+        val player = MinecraftClient.getInstance().player ?: return
+        val rotation = InventoryUtils.extractDyeRotation(screen.screenHandler.slots, player.inventory)
+
+        if (rotation.dyeIds.isEmpty()) {
+            DyeTrackerMod.debug("Dyes screen detected but no rotation dyes parsed; not persisting")
+            return
+        }
+
+        ConfigManager.updateDyeRotation(rotation)
+        DyeTrackerMod.info("Captured dye rotation ({} dyes): {}", rotation.dyeIds.size, rotation.dyeIds)
+
+        player.sendMessage(
+            Text.literal("Captured current dye rotation (${rotation.dyeIds.size} dyes)")
+                .formatted(Formatting.GREEN),
+            false
+        )
     }
 
     /**

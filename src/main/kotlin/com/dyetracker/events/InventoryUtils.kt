@@ -1,9 +1,13 @@
 package com.dyetracker.events
 
+import com.dyetracker.DyeTrackerMod
 import com.dyetracker.data.DroppedDye
 import com.dyetracker.data.DungeonFloor
+import com.dyetracker.data.DyeRotation
 import com.dyetracker.data.SlayerType
+import net.minecraft.inventory.Inventory
 import net.minecraft.item.ItemStack
+import net.minecraft.screen.slot.Slot
 import net.minecraft.text.Text
 
 /**
@@ -16,6 +20,7 @@ sealed class InventoryType {
     data object ExperimentationRngMeter : InventoryType()
     data object Commissions : InventoryType()
     data object VincentDyeCollection : InventoryType()
+    data object VincentDyeRotation : InventoryType()
 }
 
 /**
@@ -53,6 +58,10 @@ object InventoryUtils {
     // Vincent dye compendium GUI title
     private const val VINCENT_TITLE = "Dye Compendium"
 
+    // Vincent current dye rotation GUI title (a distinct chest GUI; exact match so it does not
+    // collide with the "Dye Compendium" compendium screen).
+    private const val ROTATION_TITLE = "Dyes"
+
     // Commissions GUI title
     private const val COMMISSIONS_TITLE = "Commissions"
 
@@ -77,6 +86,11 @@ object InventoryUtils {
         // Check for Vincent dye collection GUI
         if (cleanTitle == VINCENT_TITLE) {
             return InventoryType.VincentDyeCollection
+        }
+
+        // Check for Vincent current dye rotation GUI (exact match, distinct from the compendium)
+        if (cleanTitle == ROTATION_TITLE) {
+            return InventoryType.VincentDyeRotation
         }
 
         // Check for Commissions GUI
@@ -329,22 +343,36 @@ object InventoryUtils {
     private val GLOBAL_DROPS_PATTERN = Regex("""Global drops:\s*([\d,]+)""")
 
     /**
-     * Parse a dye item from the Dye Compendium into a DroppedDye.
-     * Returns null if the item is not a recognized dye or if the player hasn't dropped it.
-     * Only returns a DroppedDye when "You've dropped: X" where X > 0.
+     * Lore pattern for the rotation boost line, e.g.
+     * "This dye is 3x as common during SkyBlock Year 492!". Group 1 = multiplier, group 2 = year.
+     * Matched against the lore lines joined with spaces, since Hypixel may split this sentence
+     * across two lore lines.
      */
-    fun parseDyeItem(itemStack: ItemStack): DroppedDye? {
+    private val ROTATION_BOOST_PATTERN =
+        Regex("""This dye is\s*(\d+)x as common during SkyBlock Year\s*(\d+)""")
+
+    /**
+     * Resolve a dye item's display name to its dye ID, or null if the item is not a recognized
+     * dye. Strips formatting + the " Dye" suffix and looks up [DYE_DISPLAY_NAME_TO_ID].
+     */
+    private fun resolveDyeId(itemStack: ItemStack): String? {
         val rawName = itemStack.name?.string ?: return null
         val cleanName = stripFormatting(rawName)
-
-        // Strip " Dye" suffix if present, then lowercase for lookup
         val dyeName = if (cleanName.endsWith(DYE_ITEM_SUFFIX)) {
             cleanName.dropLast(DYE_ITEM_SUFFIX.length)
         } else {
             cleanName
         }
+        return DYE_DISPLAY_NAME_TO_ID[dyeName.lowercase()]
+    }
 
-        val dyeId = DYE_DISPLAY_NAME_TO_ID[dyeName.lowercase()] ?: return null
+    /**
+     * Parse a dye item from the Dye Compendium into a DroppedDye.
+     * Returns null if the item is not a recognized dye or if the player hasn't dropped it.
+     * Only returns a DroppedDye when "You've dropped: X" where X > 0.
+     */
+    fun parseDyeItem(itemStack: ItemStack): DroppedDye? {
+        val dyeId = resolveDyeId(itemStack) ?: return null
 
         // Parse lore for drop count and metadata
         val lore = getLore(itemStack)
@@ -399,6 +427,70 @@ object InventoryUtils {
             }
         }
         return dyes
+    }
+
+    // ==================== Vincent Dye Rotation Parsing ====================
+
+    /**
+     * Extract the current dye rotation from the Vincent "Dyes" screen.
+     *
+     * Unlike [extractDyeCollection], this does NOT gate on "You've dropped > 0" — rotation dyes
+     * the player has never obtained must still be captured. Only container slots are considered
+     * ([playerInventory] slots are skipped), and non-dye container items (the `$` shop icon, the
+     * info sign, the nav block/X/item) are excluded naturally because their names don't resolve to
+     * a known dye. Container slot order is preserved into [DyeRotation.dyeIds] so the widget renders
+     * in screen order. Per-dye boost multiplier + SkyBlock year are captured from lore when present.
+     */
+    fun extractDyeRotation(slots: Iterable<Slot>, playerInventory: Inventory): DyeRotation {
+        val dyeIds = mutableListOf<String>()
+        val boosts = mutableMapOf<String, Int>()
+        var skyblockYear: Int? = null
+
+        for (slot in slots) {
+            // Skip the player inventory; only the container's slots hold the rotation.
+            if (slot.inventory === playerInventory) continue
+
+            val stack = slot.stack
+            if (stack.isEmpty) continue
+
+            val dyeId = resolveDyeId(stack)
+            if (dyeId == null) {
+                // Log only items that look like a dye ("<Name> Dye") but aren't in the map, so a
+                // future Hypixel rename is diagnosable — without spamming for the $/sign/nav items.
+                val name = stripFormatting(stack.name?.string ?: "")
+                if (name.endsWith(DYE_ITEM_SUFFIX)) {
+                    DyeTrackerMod.debug("Skipping unmapped rotation dye: {}", name)
+                }
+                continue
+            }
+            dyeIds.add(dyeId)
+
+            val boost = parseRotationBoost(getLore(stack))
+            if (boost != null) {
+                boosts[dyeId] = boost.first
+                if (skyblockYear == null) skyblockYear = boost.second
+            }
+        }
+
+        return DyeRotation(
+            dyeIds = dyeIds,
+            capturedAt = System.currentTimeMillis(),
+            boosts = boosts.ifEmpty { null },
+            skyblockYear = skyblockYear,
+        )
+    }
+
+    /**
+     * Parse the boost line from a rotation dye's lore. Returns (multiplier, skyblockYear) or null
+     * if absent. Lore lines are joined with spaces first so a sentence split across two lore lines
+     * still matches.
+     */
+    private fun parseRotationBoost(lore: List<Text>): Pair<Int, Int>? {
+        val joined = lore.joinToString(" ") { stripFormatting(it.string) }
+        val match = ROTATION_BOOST_PATTERN.find(joined) ?: return null
+        val multiplier = match.groupValues[1].toIntOrNull() ?: return null
+        val year = match.groupValues[2].toIntOrNull() ?: return null
+        return multiplier to year
     }
 
     /**

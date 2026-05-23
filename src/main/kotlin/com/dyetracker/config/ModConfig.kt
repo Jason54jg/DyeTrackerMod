@@ -1,6 +1,8 @@
 package com.dyetracker.config
 
+import com.dyetracker.data.DyeRotation
 import com.dyetracker.overlay.GifOverlayConfig
+import com.dyetracker.rotation.RotationWidgetConfig
 import kotlinx.serialization.Serializable
 
 /**
@@ -37,7 +39,20 @@ data class ModConfig(
     /**
      * Persisted GIF/image HUD overlays added by the player. See PBI-28.
      */
-    val gifs: List<GifOverlayConfig> = emptyList()
+    val gifs: List<GifOverlayConfig> = emptyList(),
+
+    /**
+     * Last-known Vincent dye rotation, captured from the in-game "Dyes" screen. Persisted so the
+     * rotation HUD widget can render immediately on startup before the player reopens Vincent.
+     * Null until the first capture. See PBI-31.
+     */
+    val dyeRotation: DyeRotation? = null,
+
+    /**
+     * Placement (position/scale/visibility) of the singleton dye-rotation HUD widget. Null until
+     * first seeded; the rotation feature seeds a default on startup. See PBI-31.
+     */
+    val rotationWidget: RotationWidgetConfig? = null
 ) {
     companion object {
         const val DEFAULT_API_URL = "https://dye-tracker-api.seanwalsh4118-7a3.workers.dev"

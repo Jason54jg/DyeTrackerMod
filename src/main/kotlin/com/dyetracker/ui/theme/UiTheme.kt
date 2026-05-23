@@ -39,6 +39,12 @@ object UiTheme {
         /** Error status text. */
         const val STATUS_ERROR: Int = 0xFF_FF_55_55.toInt()
 
+        /** Dye-rotation 2x boost badge (green), seeded from the external dyes browser source. */
+        const val BOOST_2X: Int = 0xFF_43_B5_81.toInt()
+
+        /** Dye-rotation 3x boost badge (gold), seeded from the external dyes browser source. */
+        const val BOOST_3X: Int = 0xFF_FA_A6_1A.toInt()
+
         /** Translucent wash over a hidden (visibility-off) widget. */
         const val HIDDEN_DIM: Int = 0xB0_00_00_00.toInt()
 

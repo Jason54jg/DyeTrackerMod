@@ -1,7 +1,9 @@
 package com.dyetracker.config
 
 import com.dyetracker.DyeTrackerMod
+import com.dyetracker.data.DyeRotation
 import com.dyetracker.overlay.GifOverlayConfig
+import com.dyetracker.rotation.RotationWidgetConfig
 import com.dyetracker.ui.persist.PlacementStore
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -20,6 +22,7 @@ object ConfigManager {
     private const val CONFIG_FILE_NAME = "config.json"
 
     private val gifsLock = Any()
+    private val rotationLock = Any()
 
     /**
      * Persisted placement store for the GIF/image HUD overlays. Provides the generic
@@ -32,6 +35,18 @@ object ConfigManager {
         write = { config = config.copy(gifs = it) },
         persist = { save() },
         lock = gifsLock,
+    )
+
+    /**
+     * Placement store for the singleton dye-rotation widget. Bridges the single nullable
+     * [ModConfig.rotationWidget] field to the list-based [PlacementStore] (0-or-1 elements) so the
+     * rotation widget reuses the same transient-update-then-flush machinery as the GIF overlays.
+     */
+    val rotationPlacements: PlacementStore<RotationWidgetConfig> = PlacementStore(
+        read = { config.rotationWidget?.let { listOf(it) } ?: emptyList() },
+        write = { config = config.copy(rotationWidget = it.firstOrNull()) },
+        persist = { save() },
+        lock = rotationLock,
     )
 
     private val json = Json {
@@ -116,6 +131,19 @@ object ConfigManager {
     fun update(updater: (ModConfig) -> ModConfig) {
         config = updater(config)
         save()
+    }
+
+    /**
+     * Get the last-known captured dye rotation, or null if none has been captured yet.
+     */
+    fun getDyeRotation(): DyeRotation? = config.dyeRotation
+
+    /**
+     * Persist a newly captured dye rotation, replacing any prior one (last-write-wins). Writes
+     * through the standard [update] path so it is saved to disk immediately.
+     */
+    fun updateDyeRotation(rotation: DyeRotation) {
+        update { it.copy(dyeRotation = rotation) }
     }
 
     /**
