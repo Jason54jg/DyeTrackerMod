@@ -3,6 +3,7 @@ package com.dyetracker.auth
 import com.dyetracker.DyeTrackerMod
 import com.dyetracker.api.ApiClient
 import com.dyetracker.config.ConfigManager
+import com.dyetracker.dyeprogress.DyeProgressStore
 import net.minecraft.client.MinecraftClient
 import java.net.URI
 import java.util.concurrent.CompletableFuture
@@ -192,6 +193,9 @@ object AccountVerification {
                 authToken = ""
             )
         }
+        // Drop volatile per-account dye progress so widgets don't show the old account's stale
+        // values after unlinking (placements remain in config but render as Loading until relinked).
+        DyeProgressStore.clear()
         DyeTrackerMod.info("Account unlinked")
     }
 }
