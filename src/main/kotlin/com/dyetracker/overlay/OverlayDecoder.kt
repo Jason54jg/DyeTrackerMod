@@ -1,6 +1,8 @@
 package com.dyetracker.overlay
 
 import com.dyetracker.DyeTrackerMod
+import com.dyetracker.ui.texture.ImageFrame
+import com.dyetracker.ui.texture.ImageFrames
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.w3c.dom.NodeList
@@ -52,7 +54,11 @@ object OverlayDecoder {
         val totalDurationMs: Int,
         val width: Int,
         val height: Int,
-    )
+    ) {
+        /** Adapt to the toolkit's feature-agnostic [ImageFrames] for GPU upload. */
+        fun toImageFrames(): ImageFrames =
+            ImageFrames(frames.map { ImageFrame(it.image, it.delayMs) }, width, height)
+    }
 
     /** Why a decode failed. */
     sealed class Reason {

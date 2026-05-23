@@ -6,10 +6,10 @@ import com.dyetracker.config.ConfigManager
 import com.dyetracker.data.DungeonFloor
 import com.dyetracker.data.RngDataStore
 import com.dyetracker.data.SlayerType
-import com.dyetracker.overlay.EditOverlaysScreen
 import com.dyetracker.overlay.OverlayAddPipeline
-import com.dyetracker.overlay.OverlayTextureManager
 import com.dyetracker.sync.SyncManager
+import com.dyetracker.ui.edit.WidgetEditScreen
+import com.dyetracker.ui.texture.ImageTextureManager
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.StringArgumentType
 import kotlinx.coroutines.CoroutineScope
@@ -182,8 +182,8 @@ object DyeTrackerCommands {
         )
 
         gifCommandScope.launch {
-            // The pipeline handles download → decode → upload → addGif and surfaces a
-            // single human-readable failure string. We just translate the Outcome to chat.
+            // The pipeline handles download → decode → upload → persist (gifPlacements.add)
+            // and surfaces a single human-readable failure string. We translate it to chat.
             val outcome = OverlayAddPipeline.addFromUrl(rawUrl)
             postOnClient {
                 when (outcome) {
@@ -202,7 +202,7 @@ object DyeTrackerCommands {
     }
 
     private fun handleGifListCommand(source: FabricClientCommandSource) {
-        val gifs = ConfigManager.config.gifs
+        val gifs = ConfigManager.gifPlacements.all()
         if (gifs.isEmpty()) {
             source.sendFeedback(
                 Text.literal("No overlays configured. Add one with /dyetracker gif add <url>")
@@ -226,14 +226,14 @@ object DyeTrackerCommands {
     }
 
     private fun handleGifRemoveCommand(source: FabricClientCommandSource, id: String) {
-        if (!ConfigManager.removeGif(id)) {
+        if (!ConfigManager.gifPlacements.remove(id)) {
             source.sendFeedback(
                 Text.literal("No overlay with id '$id'.")
                     .formatted(Formatting.RED)
             )
             return
         }
-        OverlayTextureManager.release(id)
+        ImageTextureManager.release(id)
         source.sendFeedback(
             Text.literal("Removed overlay '$id'.")
                 .formatted(Formatting.GREEN)
@@ -244,7 +244,7 @@ object DyeTrackerCommands {
     private fun handleGifEditCommand(source: FabricClientCommandSource) {
         // Brigadier client commands already execute on the render thread, so no marshal
         // needed. The screen IS the feedback; no chat output here.
-        MinecraftClient.getInstance().setScreen(EditOverlaysScreen())
+        MinecraftClient.getInstance().setScreen(WidgetEditScreen())
     }
 
     /** Marshal a callback onto the client thread so we never touch client APIs from IO. */

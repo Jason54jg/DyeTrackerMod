@@ -2,6 +2,7 @@ package com.dyetracker.overlay
 
 import com.dyetracker.DyeTrackerMod
 import com.dyetracker.config.ConfigManager
+import com.dyetracker.ui.texture.ImageTextureManager
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlin.coroutines.coroutineContext
@@ -9,9 +10,9 @@ import kotlin.coroutines.coroutineContext
 /**
  * Shared download → decode → upload → persist pipeline for adding a new GIF/image
  * overlay from a URL. Used by both `/dyetracker gif add` (chat-driven) and the in-screen
- * "+ Add overlay" panel inside [EditOverlaysScreen]. Callers pick how progress + result
- * are surfaced (chat formatting vs inline UI strings); the pipeline itself only does
- * the work and reports stages.
+ * "+ Add overlay" panel ([GifAddAction] on the generalized edit screen). Callers pick how
+ * progress + result are surfaced (chat formatting vs inline UI strings); the pipeline itself
+ * only does the work and reports stages.
  *
  * All steps are suspend-safe and intended to run on `Dispatchers.IO`.
  */
@@ -34,7 +35,7 @@ object OverlayAddPipeline {
      * marshal anything to the client thread — callers wrap UI updates accordingly.
      *
      * Side effect on success: appends a new [GifOverlayConfig] to [ConfigManager] and
-     * uploads frames via [OverlayTextureManager]. If the config persist fails after a
+     * uploads frames via [ImageTextureManager]. If the config persist fails after a
      * successful upload, the freshly-allocated textures are released to avoid VRAM
      * orphans.
      */
@@ -58,7 +59,7 @@ object OverlayAddPipeline {
         val overlayId = GifOverlayConfig.newId()
         onStage(Stage.UPLOADING)
         try {
-            OverlayTextureManager.upload(overlayId, decoded).join()
+            ImageTextureManager.upload(overlayId, decoded.toImageFrames()).join()
         } catch (e: Throwable) {
             DyeTrackerMod.warn("Overlay upload failed for '{}': {}", overlayId, e.message ?: e.javaClass.simpleName)
             return Outcome.Failure("Upload failed (see logs).")
@@ -67,16 +68,16 @@ object OverlayAddPipeline {
         // If we were cancelled between upload completion and config write, drop the
         // orphan textures so a cancelled add does not silently leave VRAM behind.
         if (!coroutineContext.isActive) {
-            OverlayTextureManager.release(overlayId)
+            ImageTextureManager.release(overlayId)
             coroutineContext.ensureActive() // throws CancellationException
         }
 
         onStage(Stage.FINALIZING)
         try {
-            ConfigManager.addGif(GifOverlayConfig(id = overlayId, url = url))
+            ConfigManager.gifPlacements.add(GifOverlayConfig(id = overlayId, url = url))
         } catch (e: Throwable) {
             // Upload succeeded but the config write didn't — release the orphaned textures.
-            OverlayTextureManager.release(overlayId)
+            ImageTextureManager.release(overlayId)
             return Outcome.Failure("Upload succeeded but config save failed: ${e.message ?: e.javaClass.simpleName}.")
         }
 

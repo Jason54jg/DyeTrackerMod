@@ -3,11 +3,12 @@ package com.dyetracker.client
 import com.dyetracker.DyeTrackerMod
 import com.dyetracker.config.ConfigManager
 import com.dyetracker.overlay.GifOverlayConfig
+import com.dyetracker.overlay.GifHudFeature
 import com.dyetracker.overlay.OverlayDecoder
 import com.dyetracker.overlay.OverlayDownloader
-import com.dyetracker.overlay.OverlayHudRenderer
-import com.dyetracker.overlay.OverlayKeybinds
-import com.dyetracker.overlay.OverlayTextureManager
+import com.dyetracker.ui.edit.EditModeKeybind
+import com.dyetracker.ui.hud.HudWidgetHost
+import com.dyetracker.ui.texture.ImageTextureManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,14 +20,14 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
 
 /**
  * Client-only entry point. The common [DyeTrackerMod] entry handles config + commands +
- * sync; this class wires the client-only HUD overlay subsystem (renderer + keybind +
- * startup hydration of persisted overlays).
+ * sync; this class wires the client-only UI toolkit subsystem (HUD widget host + GIF feature
+ * registration + keybind + startup hydration of persisted overlays).
  *
  * Lifecycle:
- *  - `onInitializeClient` registers the HUD renderer and the `G` keybind eagerly so they
- *    are live before the first frame.
- *  - `CLIENT_STARTED` runs once the client finishes booting; we then iterate
- *    `ConfigManager.config.gifs` and fetch+decode+upload each persisted overlay in the
+ *  - `onInitializeClient` starts the [HudWidgetHost], registers the GIF overlay HUD provider,
+ *    and the `G` keybind eagerly so they are live before the first frame.
+ *  - `CLIENT_STARTED` runs once the client finishes booting; we then iterate the persisted
+ *    GIF overlays (`ConfigManager.gifPlacements`) and fetch+decode+upload each in the
  *    background so they reappear at their saved positions.
  *  - `CLIENT_STOPPING` releases every texture so dev hot-reloads don't leak VRAM.
  */
@@ -38,8 +39,9 @@ class DyeTrackerModClient : ClientModInitializer {
     private var startupLoadInvoked = false
 
     override fun onInitializeClient() {
-        OverlayHudRenderer.register()
-        OverlayKeybinds.register()
+        HudWidgetHost.register()
+        GifHudFeature.register()
+        EditModeKeybind.register()
 
         ClientLifecycleEvents.CLIENT_STARTED.register { _ -> loadConfiguredOverlays() }
         ClientLifecycleEvents.CLIENT_STOPPING.register { _ ->
@@ -49,17 +51,17 @@ class DyeTrackerModClient : ClientModInitializer {
             // belt-and-braces clear in case any release was scheduled to the render
             // thread but the executor drained early on stop.
             overlayLoadScope.cancel()
-            OverlayTextureManager.releaseAll()
-            OverlayHudRenderer.clearAllFirstRenderMarks()
+            ImageTextureManager.releaseAll()
+            HudWidgetHost.clearAllFirstRenderMarks()
         }
 
         DyeTrackerMod.info("DyeTracker client initialized (overlays subsystem)")
     }
 
     /**
-     * Re-hydrate every overlay in [ConfigManager.config.gifs] by re-running the
-     * download → decode → upload pipeline. The downloader's on-disk cache makes this
-     * cheap when the source URL hasn't changed since last run.
+     * Re-hydrate every persisted GIF overlay (via [ConfigManager.gifPlacements]) by re-running
+     * the download → decode → upload pipeline. The downloader's on-disk cache makes this cheap
+     * when the source URL hasn't changed since last run.
      */
     private fun loadConfiguredOverlays() {
         if (startupLoadInvoked) {
@@ -67,7 +69,7 @@ class DyeTrackerModClient : ClientModInitializer {
             return
         }
         startupLoadInvoked = true
-        val configured = ConfigManager.config.gifs
+        val configured = ConfigManager.gifPlacements.all()
         if (configured.isEmpty()) {
             DyeTrackerMod.debug("No persisted overlays to restore")
             return
@@ -90,7 +92,7 @@ class DyeTrackerModClient : ClientModInitializer {
             return
         }
         try {
-            OverlayTextureManager.upload(overlay.id, decoded).join()
+            ImageTextureManager.upload(overlay.id, decoded.toImageFrames()).join()
             DyeTrackerMod.debug("Restored overlay '{}' ({} frames)", overlay.id, decoded.frames.size)
         } catch (e: CancellationException) {
             // Client is stopping — propagate so the scope can shut down cleanly.

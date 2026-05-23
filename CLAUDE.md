@@ -7,7 +7,32 @@ This mod is part of a private monorepo that includes a web frontend and backend.
 ## Entry Points
 
 - `com.dyetracker.DyeTrackerMod` (`ModInitializer`, `main`): config + commands + sync handlers (common init).
-- `com.dyetracker.client.DyeTrackerModClient` (`ClientModInitializer`, `client`): HUD overlay renderer, `G` keybind, and startup re-hydration of persisted GIF overlays.
+- `com.dyetracker.client.DyeTrackerModClient` (`ClientModInitializer`, `client`): starts the UI-toolkit HUD host, registers the GIF overlay feature, the `G` edit-mode keybind, and startup re-hydration of persisted GIF overlays.
+
+## UI Toolkit (`com.dyetracker.ui`)
+
+A reusable in-game UI component toolkit (PBI 30) for building HUD widgets and edit screens from shared primitives instead of hand-rolled `DrawContext` calls. The GIF/image overlay (PBI 28) is built on it and is the reference consumer.
+
+Packages:
+
+- `ui.core` — `Widget` contract (`measure(): Size` + `draw(ctx, x, y)`; `RenderContext` carries the `DrawContext` + a pause-aware wall clock); geometry (`Size`, `Insets`, `Alignment`, `Rect`); `UiDraw` primitives (`fillRect`, `strokeRect`/`filledBox`, alignment/scale-aware `drawText`, non-tiling `blitStretched`); `WidgetPlacement` (read: id + fractional center x/y + scale + visible) and `PlacementEditor` (write).
+- `ui.theme` — `UiTheme` style tokens (`Colors`, `Spacing`, `Sizing`). No raw ARGB/px literals in widgets.
+- `ui.texture` — `ImageTextureManager` (feature-agnostic GPU texture + frame-animation backend; `upload`/`release`/`currentFrameIdentifier`/`widthOf`/`heightOf`) consuming `ImageFrames`.
+- `ui.components` — `TextWidget`, `PanelWidget`, `SpriteWidget`.
+- `ui.layout` — `Row`, `Column`, `Stack` containers (spacing, padding, alignment; nest recursively).
+- `ui.hud` — `HudWidgetHost` (one Fabric HUD element before vanilla chat; F1-hide, pause-freeze, shared wall-clock anim; positions each entry from fractional center + measured size, scaling the whole tree via the GUI matrix) and `HudWidgetRegistry` (`HudWidgetEntry`, `HudWidgetProvider`).
+- `ui.persist` — `PlacementStore<T : WidgetPlacement>`: generic id-keyed add/remove/update/`updateTransient`/`flush` over a config-list slice (transient-then-flush avoids a disk write per drag/scale frame).
+- `ui.edit` — `WidgetEditScreen` (widget-agnostic drag-to-move / scroll-to-scale / `E` visibility / `Delete` remove / focus border + label / ESC-save), `EditScreenAction` + `EditScreenActionRegistry` (pluggable per-feature panels), `EditModeKeybind` (`G`).
+
+### How to add a HUD widget
+
+1. Define a placement config implementing `WidgetPlacement` (`@Serializable`, fractional center coords) and add a `List<It>` slice to `ModConfig`.
+2. Create a `PlacementStore` over that slice in `ConfigManager` (mirror `gifPlacements`).
+3. Build the widget from toolkit components (`Panel`/`Row`/`Column`/`Text`/`Sprite`). For images, `ImageTextureManager.upload(id, ImageFrames)` then draw with `SpriteWidget(id)`.
+4. Register a `HudWidgetProvider` with `HudWidgetRegistry` mapping your configs → `HudWidgetEntry(placement, widget, editor)`; supply a `PlacementEditor` for edit support.
+5. (Optional) Contribute an `EditScreenAction` to `EditScreenActionRegistry` for add/config affordances in the edit screen.
+
+Reference implementation (GIF overlay): `overlay/GifHudFeature`, `GifOverlayConfig`, `GifPlacementEditor`, `GifAddAction`, plus the download/decode pipeline (`OverlayDownloader`, `OverlayDecoder`, `OverlayAddPipeline`).
 
 ## Repository Setup
 

@@ -2,6 +2,7 @@ package com.dyetracker.config
 
 import com.dyetracker.DyeTrackerMod
 import com.dyetracker.overlay.GifOverlayConfig
+import com.dyetracker.ui.persist.PlacementStore
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.fabricmc.loader.api.FabricLoader
@@ -19,6 +20,19 @@ object ConfigManager {
     private const val CONFIG_FILE_NAME = "config.json"
 
     private val gifsLock = Any()
+
+    /**
+     * Persisted placement store for the GIF/image HUD overlays. Provides the generic
+     * add/remove/update/updateTransient/flush API over the `gifs` config slice; the GIF
+     * subsystem mutates overlays exclusively through this. Other features create their own
+     * [PlacementStore] over their own config slice the same way.
+     */
+    val gifPlacements: PlacementStore<GifOverlayConfig> = PlacementStore(
+        read = { config.gifs },
+        write = { config = config.copy(gifs = it) },
+        persist = { save() },
+        lock = gifsLock,
+    )
 
     private val json = Json {
         prettyPrint = true
@@ -111,68 +125,6 @@ object ConfigManager {
         config = ModConfig()
         save()
         DyeTrackerMod.info("Configuration reset to defaults")
-    }
-
-    /**
-     * Append a new GIF overlay and persist. Thread-safe.
-     */
-    fun addGif(overlay: GifOverlayConfig) {
-        synchronized(gifsLock) {
-            config = config.copy(gifs = config.gifs + overlay)
-            save()
-        }
-    }
-
-    /**
-     * Remove a GIF overlay by id. Returns `true` if removed, `false` if not found.
-     * Thread-safe.
-     */
-    fun removeGif(id: String): Boolean = synchronized(gifsLock) {
-        val next = config.gifs.filterNot { it.id == id }
-        if (next.size == config.gifs.size) return@synchronized false
-        config = config.copy(gifs = next)
-        save()
-        true
-    }
-
-    /**
-     * Update a GIF overlay by id, applying [transform] to produce the new value.
-     * Returns `true` if found and updated, `false` if not found. Thread-safe.
-     */
-    fun updateGif(id: String, transform: (GifOverlayConfig) -> GifOverlayConfig): Boolean =
-        synchronized(gifsLock) {
-            val changed = applyGifUpdate(id, transform)
-            if (changed) save()
-            changed
-        }
-
-    /**
-     * In-memory variant of [updateGif] that does NOT persist to disk. Use during
-     * interactive UI (drag, scroll-scale) to avoid a disk write on every frame, then
-     * call [flushGifs] once the interaction ends to persist the final value.
-     * Returns `true` if found and updated, `false` if not found. Thread-safe.
-     */
-    fun updateGifTransient(id: String, transform: (GifOverlayConfig) -> GifOverlayConfig): Boolean =
-        synchronized(gifsLock) { applyGifUpdate(id, transform) }
-
-    /** Persist the current config to disk. Thread-safe convenience wrapper around [save]. */
-    fun flushGifs() {
-        synchronized(gifsLock) { save() }
-    }
-
-    private fun applyGifUpdate(id: String, transform: (GifOverlayConfig) -> GifOverlayConfig): Boolean {
-        var found = false
-        val next = config.gifs.map { overlay ->
-            if (overlay.id == id) {
-                found = true
-                transform(overlay)
-            } else {
-                overlay
-            }
-        }
-        if (!found) return false
-        config = config.copy(gifs = next)
-        return true
     }
 
     private fun ensureConfigDirExists() {
