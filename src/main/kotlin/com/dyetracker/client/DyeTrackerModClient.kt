@@ -2,6 +2,8 @@ package com.dyetracker.client
 
 import com.dyetracker.DyeTrackerMod
 import com.dyetracker.config.ConfigManager
+import com.dyetracker.dyeprogress.DyeProgressHudFeature
+import com.dyetracker.dyeprogress.DyeProgressPoller
 import com.dyetracker.overlay.GifOverlayConfig
 import com.dyetracker.overlay.GifHudFeature
 import com.dyetracker.overlay.OverlayDecoder
@@ -45,7 +47,9 @@ class DyeTrackerModClient : ClientModInitializer {
         GifHudFeature.register()
         DyeSpriteLoader.register()
         RotationHudFeature.register()
+        DyeProgressHudFeature.register()
         EditModeKeybind.register()
+        DyeProgressPoller.start()
 
         ClientLifecycleEvents.CLIENT_STARTED.register { _ -> loadConfiguredOverlays() }
         ClientLifecycleEvents.CLIENT_STOPPING.register { _ ->
@@ -55,6 +59,7 @@ class DyeTrackerModClient : ClientModInitializer {
             // belt-and-braces clear in case any release was scheduled to the render
             // thread but the executor drained early on stop.
             overlayLoadScope.cancel()
+            DyeProgressPoller.stop()
             ImageTextureManager.releaseAll()
             HudWidgetHost.clearAllFirstRenderMarks()
         }
