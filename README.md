@@ -1,6 +1,6 @@
 # DyeTracker Mod
 
-A Fabric mod for Minecraft that integrates with the [DyeTracker](https://dye-tracker.pages.dev) website to track your Hypixel SkyBlock dye collection progress.
+A Fabric mod for Minecraft that integrates with the [DyeTracker](https://dyetracker.xyz) website to track your Hypixel SkyBlock dye collection progress.
 
 ## Features
 
@@ -30,7 +30,7 @@ A Fabric mod for Minecraft that integrates with the [DyeTracker](https://dye-tra
 
 ### Linking Your Account
 
-1. Go to [DyeTracker](https://dye-tracker.pages.dev) and click "Link Account"
+1. Go to [DyeTracker](https://dyetracker.xyz) and click "Link Account"
 2. You'll receive an 8-character code
 3. In Minecraft, run: `/dyetracker link <code>`
 4. Your account will be verified and linked automatically
@@ -144,5 +144,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Links
 
-- [DyeTracker Website](https://dye-tracker.pages.dev)
+- [DyeTracker Website](https://dyetracker.xyz)
 - [Issue Tracker](https://github.com/stwalsh4118/DyeTrackerMod/issues)
