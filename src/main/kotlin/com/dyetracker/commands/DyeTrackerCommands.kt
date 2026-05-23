@@ -7,6 +7,8 @@ import com.dyetracker.data.DungeonFloor
 import com.dyetracker.data.RngDataStore
 import com.dyetracker.data.SlayerType
 import com.dyetracker.overlay.OverlayAddPipeline
+import com.dyetracker.rotation.RotationPlacementEditor
+import com.dyetracker.rotation.RotationWidgetConfig
 import com.dyetracker.sync.SyncManager
 import com.dyetracker.ui.edit.WidgetEditScreen
 import com.dyetracker.ui.texture.ImageTextureManager
@@ -160,6 +162,30 @@ object DyeTrackerCommands {
                             1
                         }
                 )
+                .then(
+                    ClientCommandManager.literal("rotation")
+                        .then(
+                            ClientCommandManager.literal("toggle")
+                                .executes { context ->
+                                    handleRotationToggleCommand(context.source)
+                                    1
+                                }
+                        )
+                        .then(
+                            ClientCommandManager.literal("edit")
+                                .executes { context ->
+                                    handleRotationEditCommand(context.source)
+                                    1
+                                }
+                        )
+                        .executes { context ->
+                            context.source.sendFeedback(
+                                Text.literal("Usage: /dyetracker rotation <toggle|edit>")
+                                    .formatted(Formatting.YELLOW)
+                            )
+                            1
+                        }
+                )
                 .executes { context ->
                     showHelp(context.source)
                     1
@@ -244,6 +270,24 @@ object DyeTrackerCommands {
     private fun handleGifEditCommand(source: FabricClientCommandSource) {
         // Brigadier client commands already execute on the render thread, so no marshal
         // needed. The screen IS the feedback; no chat output here.
+        MinecraftClient.getInstance().setScreen(WidgetEditScreen())
+    }
+
+    private fun handleRotationToggleCommand(source: FabricClientCommandSource) {
+        val current = ConfigManager.rotationPlacements.all().firstOrNull()?.visible
+            ?: RotationWidgetConfig().visible
+        val newVisible = !current
+        RotationPlacementEditor.setVisible(RotationWidgetConfig.WIDGET_ID, newVisible)
+        source.sendFeedback(
+            Text.literal("Dye rotation widget ${if (newVisible) "shown" else "hidden"}.")
+                .formatted(if (newVisible) Formatting.GREEN else Formatting.YELLOW)
+        )
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    private fun handleRotationEditCommand(source: FabricClientCommandSource) {
+        // Opens the same shared edit screen as `gif edit`; the rotation widget appears there
+        // because it registered a PlacementEditor. The screen is the feedback.
         MinecraftClient.getInstance().setScreen(WidgetEditScreen())
     }
 
@@ -782,6 +826,14 @@ object DyeTrackerCommands {
                 .formatted(Formatting.YELLOW)
                 .append(
                     Text.literal(" - Manage HUD image/GIF overlays")
+                        .formatted(Formatting.GRAY)
+                )
+        )
+        source.sendFeedback(
+            Text.literal("  /dyetracker rotation <toggle|edit>")
+                .formatted(Formatting.YELLOW)
+                .append(
+                    Text.literal(" - Toggle/position the dye rotation widget")
                         .formatted(Formatting.GRAY)
                 )
         )
