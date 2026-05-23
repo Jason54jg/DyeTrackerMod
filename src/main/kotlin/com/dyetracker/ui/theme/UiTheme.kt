@@ -50,6 +50,24 @@ object UiTheme {
 
         /** Strikethrough bar drawn across a hidden widget. */
         const val STRIKETHROUGH: Int = 0xCC_FF_55_55.toInt()
+
+        /** Progress-bar track (unfilled portion); a subtle translucent white, seeded from the website overlay's `white/5` track. */
+        const val PROGRESS_TRACK: Int = 0x33_FF_FF_FF.toInt()
+
+        /** Default progress-bar fill; seeded from the website single-dye overlay's default accent (`#e225f4`). Callers may override per dye color. */
+        const val PROGRESS_FILL: Int = 0xFF_E2_25_F4.toInt()
+
+        /** Translucent dark-navy card fill, mirroring the website single-dye overlay's card. */
+        const val CARD_BACKGROUND: Int = 0xD8_14_16_22.toInt()
+
+        /** Subtle bluish card border, mirroring the website overlay card's faint edge. */
+        const val CARD_BORDER: Int = 0x40_3A_40_5A.toInt()
+
+        /** Faint border around an icon box, mirroring the website overlay icon's `border-white/10`. */
+        const val ICON_BOX_BORDER: Int = 0x1A_FF_FF_FF.toInt()
+
+        /** Neutral (no-accent) icon-box tint, used when no dye accent color is available. */
+        const val ICON_BOX_TINT: Int = 0x14_FF_FF_FF.toInt()
     }
 
     /** Spacing tokens in GUI pixels. */
@@ -74,5 +92,8 @@ object UiTheme {
 
         /** Standard interactive control (button/field) height in GUI pixels. */
         const val CONTROL_HEIGHT: Int = 20
+
+        /** Default progress-bar track/fill height in GUI pixels (pre-scale). */
+        const val PROGRESS_BAR_HEIGHT: Int = 4
     }
 }
