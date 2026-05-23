@@ -2,6 +2,7 @@ package com.dyetracker.config
 
 import com.dyetracker.DyeTrackerMod
 import com.dyetracker.data.DyeRotation
+import com.dyetracker.dyeprogress.DyeProgressWidgetConfig
 import com.dyetracker.overlay.GifOverlayConfig
 import com.dyetracker.rotation.RotationWidgetConfig
 import com.dyetracker.ui.persist.PlacementStore
@@ -23,6 +24,7 @@ object ConfigManager {
 
     private val gifsLock = Any()
     private val rotationLock = Any()
+    private val dyeProgressLock = Any()
 
     /**
      * Persisted placement store for the GIF/image HUD overlays. Provides the generic
@@ -47,6 +49,18 @@ object ConfigManager {
         write = { config = config.copy(rotationWidget = it.firstOrNull()) },
         persist = { save() },
         lock = rotationLock,
+    )
+
+    /**
+     * Placement store for the multi-instance single-dye progress widgets (PBI 34). Mirrors
+     * [gifPlacements] over the `dyeProgressWidgets` config slice; the dye-progress subsystem
+     * adds/removes/edits widgets exclusively through this.
+     */
+    val dyeProgressPlacements: PlacementStore<DyeProgressWidgetConfig> = PlacementStore(
+        read = { config.dyeProgressWidgets },
+        write = { config = config.copy(dyeProgressWidgets = it) },
+        persist = { save() },
+        lock = dyeProgressLock,
     )
 
     private val json = Json {

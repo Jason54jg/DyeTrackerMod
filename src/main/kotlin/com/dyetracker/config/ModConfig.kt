@@ -1,6 +1,7 @@
 package com.dyetracker.config
 
 import com.dyetracker.data.DyeRotation
+import com.dyetracker.dyeprogress.DyeProgressWidgetConfig
 import com.dyetracker.overlay.GifOverlayConfig
 import com.dyetracker.rotation.RotationWidgetConfig
 import kotlinx.serialization.Serializable
@@ -52,7 +53,14 @@ data class ModConfig(
      * Placement (position/scale/visibility) of the singleton dye-rotation HUD widget. Null until
      * first seeded; the rotation feature seeds a default on startup. See PBI-31.
      */
-    val rotationWidget: RotationWidgetConfig? = null
+    val rotationWidget: RotationWidgetConfig? = null,
+
+    /**
+     * Persisted single-dye progress HUD widgets added by the player (one per chosen dye +
+     * profile). Multi-instance, like [gifs]. Defaults to empty so existing config files without
+     * this field load unchanged. See PBI-34.
+     */
+    val dyeProgressWidgets: List<DyeProgressWidgetConfig> = emptyList()
 ) {
     companion object {
         const val DEFAULT_API_URL = "https://dye-tracker-api.seanwalsh4118-7a3.workers.dev"
