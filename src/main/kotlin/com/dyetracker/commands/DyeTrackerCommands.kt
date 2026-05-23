@@ -6,7 +6,10 @@ import com.dyetracker.config.ConfigManager
 import com.dyetracker.data.DungeonFloor
 import com.dyetracker.data.RngDataStore
 import com.dyetracker.data.SlayerType
+import com.dyetracker.dyeprogress.DyeProgressAdder
+import com.dyetracker.dyeprogress.DyeProgressPlacementEditor
 import com.dyetracker.overlay.OverlayAddPipeline
+import com.dyetracker.rotation.DyeSprites
 import com.dyetracker.rotation.RotationPlacementEditor
 import com.dyetracker.rotation.RotationWidgetConfig
 import com.dyetracker.sync.SyncManager
@@ -36,6 +39,9 @@ object DyeTrackerCommands {
     private const val GIF_URL_DISPLAY_MAX = 60
     private const val GIF_URL_TRUNCATE_AT = 57
     private val gifCommandScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** IO scope for the async dye-widget add command (profile resolution). */
+    private val dyeCommandScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
      * Register all commands via the ClientCommandRegistrationCallback.
@@ -186,6 +192,93 @@ object DyeTrackerCommands {
                             1
                         }
                 )
+                .then(
+                    ClientCommandManager.literal("dye")
+                        .then(
+                            ClientCommandManager.literal("list")
+                                .executes { context ->
+                                    handleDyeListCommand(context.source)
+                                    1
+                                }
+                        )
+                        .then(
+                            ClientCommandManager.literal("remove")
+                                .then(
+                                    ClientCommandManager.argument("id", StringArgumentType.word())
+                                        .executes { context ->
+                                            handleDyeRemoveCommand(context.source, StringArgumentType.getString(context, "id"))
+                                            1
+                                        }
+                                )
+                                .executes { context ->
+                                    context.source.sendFeedback(
+                                        Text.literal("Usage: /dyetracker dye remove <id>")
+                                            .formatted(Formatting.YELLOW)
+                                    )
+                                    1
+                                }
+                        )
+                        .then(
+                            ClientCommandManager.literal("toggle")
+                                .then(
+                                    ClientCommandManager.argument("id", StringArgumentType.word())
+                                        .executes { context ->
+                                            handleDyeToggleCommand(context.source, StringArgumentType.getString(context, "id"))
+                                            1
+                                        }
+                                )
+                                .executes { context ->
+                                    // No id → toggle every dye widget at once.
+                                    handleDyeToggleCommand(context.source, null)
+                                    1
+                                }
+                        )
+                        .then(
+                            ClientCommandManager.literal("edit")
+                                .executes { context ->
+                                    handleDyeEditCommand(context.source)
+                                    1
+                                }
+                        )
+                        .then(
+                            ClientCommandManager.literal("add")
+                                .then(
+                                    ClientCommandManager.argument("dyeId", StringArgumentType.word())
+                                        .then(
+                                            ClientCommandManager.argument("profile", StringArgumentType.greedyString())
+                                                .executes { context ->
+                                                    handleDyeAddCommand(
+                                                        context.source,
+                                                        StringArgumentType.getString(context, "dyeId"),
+                                                        StringArgumentType.getString(context, "profile"),
+                                                    )
+                                                    1
+                                                }
+                                        )
+                                        .executes { context ->
+                                            context.source.sendFeedback(
+                                                Text.literal("Usage: /dyetracker dye add <dyeId> <profile>")
+                                                    .formatted(Formatting.YELLOW)
+                                            )
+                                            1
+                                        }
+                                )
+                                .executes { context ->
+                                    context.source.sendFeedback(
+                                        Text.literal("Usage: /dyetracker dye add <dyeId> <profile>")
+                                            .formatted(Formatting.YELLOW)
+                                    )
+                                    1
+                                }
+                        )
+                        .executes { context ->
+                            context.source.sendFeedback(
+                                Text.literal("Usage: /dyetracker dye <list|remove|edit|toggle|add>")
+                                    .formatted(Formatting.YELLOW)
+                            )
+                            1
+                        }
+                )
                 .executes { context ->
                     showHelp(context.source)
                     1
@@ -289,6 +382,133 @@ object DyeTrackerCommands {
         // Opens the same shared edit screen as `gif edit`; the rotation widget appears there
         // because it registered a PlacementEditor. The screen is the feedback.
         MinecraftClient.getInstance().setScreen(WidgetEditScreen())
+    }
+
+    private fun handleDyeListCommand(source: FabricClientCommandSource) {
+        val widgets = ConfigManager.dyeProgressPlacements.all()
+        if (widgets.isEmpty()) {
+            source.sendFeedback(
+                Text.literal("No dye widgets configured. Add one in /dyetracker dye edit (+ Add dye) or /dyetracker dye add <dyeId> <profile>")
+                    .formatted(Formatting.YELLOW)
+            )
+            return
+        }
+        for (widget in widgets) {
+            val visibility = if (widget.visible) "visible" else "hidden"
+            source.sendFeedback(
+                Text.literal(
+                    "${widget.id}: ${widget.dyeId} ${widget.profileName} " +
+                        "@(${widget.x}, ${widget.y}) scale ${widget.scale} [$visibility]"
+                ).formatted(Formatting.GRAY)
+            )
+        }
+    }
+
+    private fun handleDyeRemoveCommand(source: FabricClientCommandSource, id: String) {
+        if (!ConfigManager.dyeProgressPlacements.remove(id)) {
+            source.sendFeedback(
+                Text.literal("No dye widget with id '$id'.")
+                    .formatted(Formatting.RED)
+            )
+            return
+        }
+        source.sendFeedback(
+            Text.literal("Removed dye widget '$id'.")
+                .formatted(Formatting.GREEN)
+        )
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    private fun handleDyeEditCommand(source: FabricClientCommandSource) {
+        // Opens the same shared edit screen as `gif edit`; dye widgets appear there because they
+        // registered a PlacementEditor, and the "+ Add dye" panel is available. Screen = feedback.
+        MinecraftClient.getInstance().setScreen(WidgetEditScreen())
+    }
+
+    /** Toggle one widget's visibility, or all of them when [id] is null. */
+    private fun handleDyeToggleCommand(source: FabricClientCommandSource, id: String?) {
+        val widgets = ConfigManager.dyeProgressPlacements.all()
+        if (widgets.isEmpty()) {
+            source.sendFeedback(
+                Text.literal("No dye widgets configured.")
+                    .formatted(Formatting.YELLOW)
+            )
+            return
+        }
+        if (id == null) {
+            for (widget in widgets) {
+                DyeProgressPlacementEditor.setVisible(widget.id, !widget.visible)
+            }
+            source.sendFeedback(
+                Text.literal("Toggled ${widgets.size} dye widget(s).")
+                    .formatted(Formatting.GREEN)
+            )
+            return
+        }
+        val widget = widgets.firstOrNull { it.id == id }
+        if (widget == null) {
+            source.sendFeedback(
+                Text.literal("No dye widget with id '$id'.")
+                    .formatted(Formatting.RED)
+            )
+            return
+        }
+        val newVisible = !widget.visible
+        DyeProgressPlacementEditor.setVisible(id, newVisible)
+        source.sendFeedback(
+            Text.literal("Dye widget '$id' ${if (newVisible) "shown" else "hidden"}.")
+                .formatted(if (newVisible) Formatting.GREEN else Formatting.YELLOW)
+        )
+    }
+
+    private fun handleDyeAddCommand(source: FabricClientCommandSource, dyeId: String, profile: String) {
+        if (!ConfigManager.config.isLinked()) {
+            source.sendFeedback(
+                Text.literal("Account not linked. Use /dyetracker link <code> first.")
+                    .formatted(Formatting.RED)
+            )
+            return
+        }
+        if (!DyeSprites.has(dyeId)) {
+            source.sendFeedback(
+                Text.literal("Unknown dye '$dyeId'. Use /dyetracker dye edit to pick from the list.")
+                    .formatted(Formatting.RED)
+            )
+            return
+        }
+        source.sendFeedback(
+            Text.literal("Resolving profile…")
+                .formatted(Formatting.YELLOW)
+        )
+        val username = ConfigManager.config.linkedUsername
+        dyeCommandScope.launch {
+            // resolveAndAdd performs the blocking profiles fetch + add + immediate poll off-thread.
+            val result = DyeProgressAdder.resolveAndAdd(username, dyeId, profile)
+            postOnClient {
+                when (result) {
+                    is DyeProgressAdder.Result.Added -> source.sendFeedback(
+                        Text.literal("Added dye widget '${result.id}' ($dyeId @ ${profile.trim()}).")
+                            .formatted(Formatting.GREEN)
+                    )
+                    DyeProgressAdder.Result.NotLinked -> source.sendFeedback(
+                        Text.literal("Account not linked.").formatted(Formatting.RED)
+                    )
+                    DyeProgressAdder.Result.InvalidDye -> source.sendFeedback(
+                        Text.literal("Unknown dye '$dyeId'.").formatted(Formatting.RED)
+                    )
+                    DyeProgressAdder.Result.EmptyProfile -> source.sendFeedback(
+                        Text.literal("Enter a profile name.").formatted(Formatting.RED)
+                    )
+                    is DyeProgressAdder.Result.UnknownProfile -> source.sendFeedback(
+                        Text.literal("No profile '${result.typed}'. Available: ${result.available.joinToString()}")
+                            .formatted(Formatting.RED)
+                    )
+                    is DyeProgressAdder.Result.NetworkError -> source.sendFeedback(
+                        Text.literal("Couldn't load profiles: ${result.message}").formatted(Formatting.RED)
+                    )
+                }
+            }
+        }
     }
 
     /** Marshal a callback onto the client thread so we never touch client APIs from IO. */
@@ -834,6 +1054,14 @@ object DyeTrackerCommands {
                 .formatted(Formatting.YELLOW)
                 .append(
                     Text.literal(" - Toggle/position the dye rotation widget")
+                        .formatted(Formatting.GRAY)
+                )
+        )
+        source.sendFeedback(
+            Text.literal("  /dyetracker dye <list|remove|edit|toggle|add>")
+                .formatted(Formatting.YELLOW)
+                .append(
+                    Text.literal(" - Manage single-dye progress widgets")
                         .formatted(Formatting.GRAY)
                 )
         )
