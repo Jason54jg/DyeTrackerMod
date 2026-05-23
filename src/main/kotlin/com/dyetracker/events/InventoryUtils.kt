@@ -349,6 +349,13 @@ object InventoryUtils {
      */
     fun dyeDisplayNameToIdValues(): Collection<String> = DYE_DISPLAY_NAME_TO_ID.values
 
+    /**
+     * The full display-name → dye-id map (single source of truth for dye labels). Exposed so the
+     * dye picker (PBI 34) can derive its option list by inverting this map instead of duplicating
+     * the dye list.
+     */
+    fun dyeDisplayNameToId(): Map<String, String> = DYE_DISPLAY_NAME_TO_ID
+
     /** Suffix appended to dye names in inventory items */
     private const val DYE_ITEM_SUFFIX = " Dye"
 
