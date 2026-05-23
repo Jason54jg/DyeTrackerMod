@@ -5,12 +5,15 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Serialization coverage for the single-dye widget config (task 34-3): a full round-trip and
+ * Serialization coverage for the single-dye widget config (tasks 34-3, 36-1): a full round-trip,
  * the backward-compatible default (an existing config file without `dyeProgressWidgets` must
- * still load). Mirrors the ConfigManager Json config.
+ * still load), and the PBI 36 piece-toggle defaults (a pre-PBI-36 widget JSON without the
+ * `show*` / `percentInIconCorner` keys must decode to the full-layout defaults). Mirrors the
+ * ConfigManager Json config.
  */
 class DyeProgressWidgetConfigTest {
 
@@ -31,6 +34,13 @@ class DyeProgressWidgetConfigTest {
             y = 0.8f,
             scale = 1.5f,
             visible = false,
+            showBackground = false,
+            showBorder = false,
+            showProgressBar = false,
+            showName = false,
+            showSource = false,
+            showPercent = false,
+            percentInIconCorner = true,
         )
 
         val decoded = json.decodeFromString<DyeProgressWidgetConfig>(json.encodeToString(original))
@@ -51,6 +61,51 @@ class DyeProgressWidgetConfigTest {
         assertEquals(DyeProgressWidgetConfig.DEFAULT_Y, cfg.y)
         assertEquals(DyeProgressWidgetConfig.DEFAULT_SCALE, cfg.scale)
         assertEquals(DyeProgressWidgetConfig.DEFAULT_VISIBLE, cfg.visible)
+    }
+
+    @Test
+    fun `applies full-layout piece-toggle defaults when those fields are omitted`() {
+        val cfg = DyeProgressWidgetConfig(
+            id = "abc123",
+            dyeId = "celeste",
+            profileName = "Mango",
+            profileId = "p1",
+        )
+
+        assertTrue(cfg.showBackground)
+        assertTrue(cfg.showBorder)
+        assertTrue(cfg.showProgressBar)
+        assertTrue(cfg.showName)
+        assertTrue(cfg.showSource)
+        assertTrue(cfg.showPercent)
+        assertFalse(cfg.percentInIconCorner)
+    }
+
+    @Test
+    fun `a config JSON without the piece-toggle keys decodes to full-layout defaults`() {
+        // A pre-PBI-36 widget config: placement fields only, no show* / percentInIconCorner keys.
+        val legacy = """
+            {
+              "id": "w1",
+              "dyeId": "matcha",
+              "profileName": "Mango",
+              "profileId": "p1",
+              "x": 0.5,
+              "y": 0.5,
+              "scale": 1.0,
+              "visible": true
+            }
+        """.trimIndent()
+
+        val cfg = json.decodeFromString<DyeProgressWidgetConfig>(legacy)
+
+        assertTrue(cfg.showBackground)
+        assertTrue(cfg.showBorder)
+        assertTrue(cfg.showProgressBar)
+        assertTrue(cfg.showName)
+        assertTrue(cfg.showSource)
+        assertTrue(cfg.showPercent)
+        assertFalse(cfg.percentInIconCorner)
     }
 
     @Test
