@@ -6,6 +6,7 @@ import com.dyetracker.ui.components.PanelWidget
 import com.dyetracker.ui.components.ProgressBarWidget
 import com.dyetracker.ui.components.SpriteWidget
 import com.dyetracker.ui.components.TextWidget
+import com.dyetracker.ui.core.Alignment
 import com.dyetracker.ui.core.HorizontalAlignment
 import com.dyetracker.ui.core.Insets
 import com.dyetracker.ui.core.VerticalAlignment
@@ -80,6 +81,12 @@ object DyeProgressWidgetView {
     /** Alpha applied to the accent color for the icon-box tint (~15%, like the web `accent15`). */
     private const val ICON_BOX_BG_ALPHA = 0x26000000
 
+    /** Font scale for the percent badge overlaid on the icon box (`percentInIconCorner`). */
+    private const val CORNER_PERCENT_SCALE = 0.75f
+
+    /** Corner the percent badge pins to within the icon box (bottom-right). */
+    private val CORNER_PERCENT_ALIGNMENT = Alignment(HorizontalAlignment.END, VerticalAlignment.BOTTOM)
+
     /** Progress at/above which the dye is COMPLETE (matches the website overlay). */
     const val COMPLETE_THRESHOLD = 100.0
 
@@ -137,6 +144,44 @@ object DyeProgressWidgetView {
             .filter { it.isNotEmpty() }
             .joinToString(" ") { word -> word.replaceFirstChar { it.uppercase() } }
 
+    /** Resolved card fill + border for the background/border toggles (pure; see [cardChrome]). */
+    data class CardChrome(val background: Int, val border: Int?)
+
+    /**
+     * The card fill/border for the [showBackground]/[showBorder] flags: the neutral
+     * `PANEL_BACKGROUND`/`PANEL_BORDER` when on, a transparent fill / no border when off.
+     */
+    fun cardChrome(showBackground: Boolean, showBorder: Boolean): CardChrome = CardChrome(
+        background = if (showBackground) UiTheme.Colors.PANEL_BACKGROUND else UiTheme.Colors.TRANSPARENT,
+        border = if (showBorder) UiTheme.Colors.PANEL_BORDER else null,
+    )
+
+    /**
+     * Which pieces the READY widget's header/info-column include and where the percent renders,
+     * derived purely from the config flags (and whether a source line has text). The dye icon is
+     * always present and is not represented here. Drives [readyPanel]'s tree composition and is
+     * unit-tested in lieu of the live-renderer tree.
+     */
+    data class ReadyLayout(
+        val nameInHeader: Boolean,
+        val percentInHeader: Boolean,
+        val percentInCorner: Boolean,
+        val showBar: Boolean,
+        val showSource: Boolean,
+    ) {
+        /** True when the header row has at least one of name/percent and should be rendered. */
+        val hasHeader: Boolean get() = nameInHeader || percentInHeader
+    }
+
+    /** Resolve the READY-state piece layout for [cfg]; [hasSource] gates the source line. */
+    fun readyLayout(cfg: DyeProgressWidgetConfig, hasSource: Boolean): ReadyLayout = ReadyLayout(
+        nameInHeader = cfg.showName,
+        percentInHeader = cfg.showPercent && !cfg.percentInIconCorner,
+        percentInCorner = cfg.showPercent && cfg.percentInIconCorner,
+        showBar = cfg.showProgressBar,
+        showSource = cfg.showSource && hasSource,
+    )
+
     /** Compose the widget tree for [cfg] given the current store [status] and per-dye [entry]. */
     fun build(cfg: DyeProgressWidgetConfig, status: DyeProgressStore.Status, entry: DyeProgressEntry?): Widget =
         when (selectState(status, entry)) {
@@ -167,48 +212,83 @@ object DyeProgressWidgetView {
         border = UiTheme.Colors.ICON_BOX_BORDER,
     )
 
-    /** The navy card: an [iconBox] beside an [info] column, vertically centered (mirrors the web row). */
-    private fun card(dyeId: String, bgTint: Int, info: Widget): Widget = PanelWidget(
+    /**
+     * The card: a [Row] of [rowChildren] (the icon, optionally followed by an info column),
+     * vertically centered, wrapped in a panel painted with [chrome]'s fill/border. When the info
+     * column is empty the caller passes just the icon, so the card collapses to the icon box.
+     */
+    private fun card(rowChildren: List<Widget>, chrome: CardChrome): Widget = PanelWidget(
         child = Row(
-            children = listOf(iconBox(dyeId, bgTint), info),
+            children = rowChildren,
             spacing = CARD_GAP,
             crossAxisAlignment = VerticalAlignment.CENTER,
         ),
-        background = UiTheme.Colors.CARD_BACKGROUND,
-        border = UiTheme.Colors.CARD_BORDER,
+        background = chrome.background,
+        border = chrome.border,
     )
+
+    /**
+     * The card's left cell: the [iconBox], optionally overlaid with a [cornerBadge] (the
+     * percent) pinned to [CORNER_PERCENT_ALIGNMENT] via a [Stack]. The icon is always present.
+     */
+    private fun iconCell(dyeId: String, bgTint: Int, cornerBadge: Widget?): Widget {
+        val box = iconBox(dyeId, bgTint)
+        if (cornerBadge == null) return box
+        return Stack(
+            listOf(
+                StackChild(box, Alignment.TOP_LEFT),
+                StackChild(cornerBadge, CORNER_PERCENT_ALIGNMENT),
+            ),
+        )
+    }
+
+    /** The small percent badge overlaid on the icon box when `percentInIconCorner` is set. */
+    private fun cornerPercentBadge(percent: String, accent: Int): Widget =
+        TextWidget(percent, color = accent, scale = CORNER_PERCENT_SCALE, alignment = HorizontalAlignment.END)
+
+    /** Assemble the card row from the always-present [icon] and a (possibly empty) [infoChildren]. */
+    private fun cardRow(icon: Widget, infoChildren: List<Widget>): List<Widget> =
+        if (infoChildren.isEmpty()) listOf(icon) else listOf(icon, infoColumn(infoChildren))
 
     /** A left-aligned info column with [ROW_GAP] spacing (the right-hand side of the card). */
     private fun infoColumn(children: List<Widget>): Widget =
         Column(children = children, spacing = ROW_GAP, crossAxisAlignment = HorizontalAlignment.START)
 
-    private fun hintPanel(cfg: DyeProgressWidgetConfig, hint: String, hintColor: Int): Widget = card(
-        cfg.dyeId,
-        UiTheme.Colors.ICON_BOX_TINT,
-        infoColumn(
-            listOf(
-                TextWidget(humanizeDyeId(cfg.dyeId), alignment = HorizontalAlignment.START),
-                TextWidget(hint, color = hintColor, scale = SECONDARY_TEXT_SCALE, alignment = HorizontalAlignment.START),
-            ),
-        ),
-    )
+    private fun hintPanel(cfg: DyeProgressWidgetConfig, hint: String, hintColor: Int): Widget {
+        val infoChildren = buildList {
+            if (cfg.showName) {
+                add(TextWidget(humanizeDyeId(cfg.dyeId), alignment = HorizontalAlignment.START))
+            }
+            if (cfg.showSource) {
+                add(TextWidget(hint, color = hintColor, scale = SECONDARY_TEXT_SCALE, alignment = HorizontalAlignment.START))
+            }
+        }
+        val icon = iconCell(cfg.dyeId, UiTheme.Colors.ICON_BOX_TINT, cornerBadge = null)
+        return card(cardRow(icon, infoChildren), cardChrome(cfg.showBackground, cfg.showBorder))
+    }
 
-    private fun notTrackablePanel(cfg: DyeProgressWidgetConfig, entry: DyeProgressEntry?): Widget = card(
-        cfg.dyeId,
-        iconTintFor(entry),
-        infoColumn(
-            listOf(
-                TextWidget(nameOf(cfg, entry), alignment = HorizontalAlignment.START),
-                TextWidget(NA_TEXT, color = UiTheme.Colors.TEXT_SECONDARY, alignment = HorizontalAlignment.START),
-                TextWidget(
-                    NOT_TRACKABLE_TEXT,
-                    color = UiTheme.Colors.TEXT_SECONDARY,
-                    scale = SECONDARY_TEXT_SCALE,
-                    alignment = HorizontalAlignment.START,
-                ),
-            ),
-        ),
-    )
+    private fun notTrackablePanel(cfg: DyeProgressWidgetConfig, entry: DyeProgressEntry?): Widget {
+        val infoChildren = buildList {
+            if (cfg.showName) {
+                add(TextWidget(nameOf(cfg, entry), alignment = HorizontalAlignment.START))
+            }
+            if (cfg.showPercent) {
+                add(TextWidget(NA_TEXT, color = UiTheme.Colors.TEXT_SECONDARY, alignment = HorizontalAlignment.START))
+            }
+            if (cfg.showSource) {
+                add(
+                    TextWidget(
+                        NOT_TRACKABLE_TEXT,
+                        color = UiTheme.Colors.TEXT_SECONDARY,
+                        scale = SECONDARY_TEXT_SCALE,
+                        alignment = HorizontalAlignment.START,
+                    ),
+                )
+            }
+        }
+        val icon = iconCell(cfg.dyeId, iconTintFor(entry), cornerBadge = null)
+        return card(cardRow(icon, infoChildren), cardChrome(cfg.showBackground, cfg.showBorder))
+    }
 
     private fun readyPanel(cfg: DyeProgressWidgetConfig, entry: DyeProgressEntry): Widget {
         val accent = parseAccentColor(entry.color)
@@ -218,34 +298,60 @@ object DyeProgressWidgetView {
         val name = nameOf(cfg, entry)
         val percent = formatProgress(entry.progress)
         val sourceText = if (isComplete) COMPLETE_TEXT else (entry.source ?: entry.formula).orEmpty()
-        val hasSource = sourceText.isNotBlank()
 
-        // Width of the info column: enough for the name+percent header and the source line.
-        val nameWidth = TextWidget(name).measure().width
-        val percentWidth = TextWidget(percent).measure().width
-        val sourceWidth = if (hasSource) TextWidget(sourceText, scale = SECONDARY_TEXT_SCALE).measure().width else 0
-        val colWidth = maxOf(nameWidth + HEADER_GAP + percentWidth, sourceWidth, MIN_BAR_WIDTH)
+        val layout = readyLayout(cfg, hasSource = sourceText.isNotBlank())
 
-        // Header: name pinned left, percent pinned right, both spanning the column width.
-        val header = Stack(
+        // Column width: spans the widest present piece so the header pins to the bar's edges.
+        val nameWidth = if (layout.nameInHeader) TextWidget(name).measure().width else 0
+        val percentWidth = if (layout.percentInHeader) TextWidget(percent).measure().width else 0
+        val headerWidth = if (layout.nameInHeader && layout.percentInHeader) {
+            nameWidth + HEADER_GAP + percentWidth
+        } else {
+            maxOf(nameWidth, percentWidth)
+        }
+        val sourceWidth = if (layout.showSource) TextWidget(sourceText, scale = SECONDARY_TEXT_SCALE).measure().width else 0
+        val colWidth = buildList {
+            if (layout.hasHeader) add(headerWidth)
+            if (layout.showSource) add(sourceWidth)
+            if (layout.showBar) add(MIN_BAR_WIDTH)
+        }.maxOrNull() ?: 0
+
+        val infoChildren = buildList {
+            if (layout.hasHeader) add(header(layout, name, percent, accent, colWidth))
+            if (layout.showBar) {
+                add(ProgressBarWidget(value = progress.toFloat(), width = colWidth, height = BAR_HEIGHT, fillColor = accent))
+            }
+            if (layout.showSource) {
+                add(
+                    TextWidget(
+                        sourceText,
+                        color = if (isComplete) accent else UiTheme.Colors.TEXT_SECONDARY,
+                        scale = SECONDARY_TEXT_SCALE,
+                        alignment = HorizontalAlignment.START,
+                    ),
+                )
+            }
+        }
+
+        val cornerBadge = if (layout.percentInCorner) cornerPercentBadge(percent, accent) else null
+        val icon = iconCell(cfg.dyeId, iconTint(accent), cornerBadge)
+        return card(cardRow(icon, infoChildren), cardChrome(cfg.showBackground, cfg.showBorder))
+    }
+
+    /**
+     * The header row for the READY state: name pinned left and percent pinned right across
+     * [colWidth] when both are present (a [Stack]); just the present one (aligned to its edge)
+     * when only one is. Caller guarantees at least one of name/percent is in the header.
+     */
+    private fun header(layout: ReadyLayout, name: String, percent: String, accent: Int, colWidth: Int): Widget = when {
+        layout.nameInHeader && layout.percentInHeader -> Stack(
             listOf(
                 StackChild(TextWidget(name, minWidth = colWidth, alignment = HorizontalAlignment.START)),
                 StackChild(TextWidget(percent, color = accent, minWidth = colWidth, alignment = HorizontalAlignment.END)),
             ),
         )
-        val bar = ProgressBarWidget(value = progress.toFloat(), width = colWidth, height = BAR_HEIGHT, fillColor = accent)
 
-        val children = mutableListOf(header, bar)
-        if (hasSource) {
-            children.add(
-                TextWidget(
-                    sourceText,
-                    color = if (isComplete) accent else UiTheme.Colors.TEXT_SECONDARY,
-                    scale = SECONDARY_TEXT_SCALE,
-                    alignment = HorizontalAlignment.START,
-                ),
-            )
-        }
-        return card(cfg.dyeId, iconTint(accent), infoColumn(children))
+        layout.nameInHeader -> TextWidget(name, minWidth = colWidth, alignment = HorizontalAlignment.START)
+        else -> TextWidget(percent, color = accent, minWidth = colWidth, alignment = HorizontalAlignment.END)
     }
 }

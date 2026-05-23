@@ -15,6 +15,9 @@ object UiTheme {
 
     /** ARGB color tokens (0xAARRGGBB). */
     object Colors {
+        /** Fully transparent fill (no paint); used to disable a panel's background. */
+        const val TRANSPARENT: Int = 0x00_00_00_00
+
         /** Dim wash painted behind edit-mode content. */
         const val BACKDROP: Int = 0x80_00_00_00.toInt()
 
@@ -56,12 +59,6 @@ object UiTheme {
 
         /** Default progress-bar fill; seeded from the website single-dye overlay's default accent (`#e225f4`). Callers may override per dye color. */
         const val PROGRESS_FILL: Int = 0xFF_E2_25_F4.toInt()
-
-        /** Translucent dark-navy card fill, mirroring the website single-dye overlay's card. */
-        const val CARD_BACKGROUND: Int = 0xD8_14_16_22.toInt()
-
-        /** Subtle bluish card border, mirroring the website overlay card's faint edge. */
-        const val CARD_BORDER: Int = 0x40_3A_40_5A.toInt()
 
         /** Faint border around an icon box, mirroring the website overlay icon's `border-white/10`. */
         const val ICON_BOX_BORDER: Int = 0x1A_FF_FF_FF.toInt()
