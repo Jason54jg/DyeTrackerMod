@@ -240,6 +240,12 @@ class WidgetEditScreen : Screen(Text.literal(TITLE)) {
                 entry.editor?.setVisible(entry.id, !entry.placement.visible)
                 return true
             }
+            GLFW.GLFW_KEY_C -> {
+                val entry = focusedEntry() ?: return super.keyPressed(input)
+                val panel = entry.configPanel ?: return super.keyPressed(input)
+                activateAction(ConfigPanelAction(panel, entry.id))
+                return true
+            }
         }
         return super.keyPressed(input)
     }
@@ -269,10 +275,37 @@ class WidgetEditScreen : Screen(Text.literal(TITLE)) {
             GLFW.glfwGetKey(handle, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS
     }
 
+    /**
+     * Adapts a focused widget's [WidgetConfigPanel] (bound to [widgetId]) onto the existing modal
+     * [EditScreenAction] path, so the per-widget config panel reuses the same activate / render /
+     * key / ESC-dismiss plumbing as the toolbar actions. Never registered in
+     * [EditScreenActionRegistry], so its empty [label] is never shown.
+     */
+    private class ConfigPanelAction(
+        private val panel: WidgetConfigPanel,
+        private val widgetId: String,
+    ) : EditScreenAction {
+        // Never registered as a toolbar action, so this label is only a sensible fallback.
+        override val label: String = "Configure"
+
+        override fun onActivate(screen: WidgetEditScreen) = panel.onActivate(screen, widgetId)
+
+        override fun onDismiss() = panel.onDismiss()
+
+        override fun renderBackground(screen: WidgetEditScreen, context: DrawContext) =
+            panel.renderBackground(screen, context)
+
+        override fun renderForeground(screen: WidgetEditScreen, context: DrawContext) =
+            panel.renderForeground(screen, context)
+
+        override fun keyPressed(screen: WidgetEditScreen, keyCode: Int): Boolean =
+            panel.keyPressed(screen, keyCode)
+    }
+
     companion object {
         private const val TITLE = "DyeTracker — Edit HUD"
         private const val INSTRUCTION_BANNER =
-            "Drag to move • Scroll to scale • Shift+Scroll = fine • Del to remove • E to toggle visibility • ESC to save"
+            "Drag to move • Scroll to scale • Shift+Scroll = fine • Del to remove • E to toggle visibility • C to configure • ESC to save"
         private const val BANNER_TOP_PX = 6
         private const val LABEL_MARGIN_PX = 2
         private const val POSITION_MIN = 0.05f

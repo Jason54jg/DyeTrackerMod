@@ -3,6 +3,7 @@ package com.dyetracker.ui.hud
 import com.dyetracker.ui.core.PlacementEditor
 import com.dyetracker.ui.core.Widget
 import com.dyetracker.ui.core.WidgetPlacement
+import com.dyetracker.ui.edit.WidgetConfigPanel
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
@@ -13,11 +14,17 @@ import java.util.concurrent.CopyOnWriteArrayList
  * [editor] is the optional write side: when non-null, the widget can be moved/scaled/hidden/
  * removed in the generalized edit screen. Render-only widgets leave it null. The HUD host
  * ignores it; only the edit screen uses it.
+ *
+ * [configPanel] is the optional per-widget configuration affordance: when non-null, the focused
+ * widget can open this panel via the edit screen's configure key. Widgets without one ignore the
+ * key. The HUD host ignores it; only the edit screen uses it. Reachable only on entries that are
+ * also focusable (i.e. supply an [editor]) — the edit screen only focuses editable entries.
  */
 class HudWidgetEntry(
     val placement: WidgetPlacement,
     val widget: Widget,
     val editor: PlacementEditor? = null,
+    val configPanel: WidgetConfigPanel? = null,
 ) {
     val id: String get() = placement.id
 }
