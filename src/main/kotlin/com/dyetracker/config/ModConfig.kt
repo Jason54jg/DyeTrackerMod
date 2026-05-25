@@ -60,7 +60,15 @@ data class ModConfig(
      * profile). Multi-instance, like [gifs]. Defaults to empty so existing config files without
      * this field load unchanged. See PBI-34.
      */
-    val dyeProgressWidgets: List<DyeProgressWidgetConfig> = emptyList()
+    val dyeProgressWidgets: List<DyeProgressWidgetConfig> = emptyList(),
+
+    /**
+     * Whether DVD-bounce mode is on. The only bounce state ever persisted — per-widget drift
+     * positions are ephemeral and never written to disk, so toggling off or restarting restores
+     * every widget to its saved placement. Defaults to false so existing config files load
+     * unchanged. See PBI-38.
+     */
+    val bounceEnabled: Boolean = false
 ) {
     companion object {
         const val DEFAULT_API_URL = "https://dye-tracker-api.seanwalsh4118-7a3.workers.dev"

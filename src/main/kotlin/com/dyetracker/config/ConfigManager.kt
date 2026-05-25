@@ -161,6 +161,20 @@ object ConfigManager {
     }
 
     /**
+     * Whether DVD-bounce mode is enabled (PBI 38). The persisted on/off flag; drift positions are
+     * never stored.
+     */
+    fun isBounceEnabled(): Boolean = config.bounceEnabled
+
+    /**
+     * Persist the bounce-mode on/off flag, flushing to disk immediately via the standard [update]
+     * path. Only this boolean is written; no drift/velocity state is ever serialized.
+     */
+    fun setBounceEnabled(enabled: Boolean) {
+        update { it.copy(bounceEnabled = enabled) }
+    }
+
+    /**
      * Resets the configuration to default values and saves to disk.
      */
     fun reset() {

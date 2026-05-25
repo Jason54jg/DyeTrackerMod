@@ -10,6 +10,7 @@ import com.dyetracker.overlay.OverlayDecoder
 import com.dyetracker.overlay.OverlayDownloader
 import com.dyetracker.rotation.DyeSpriteLoader
 import com.dyetracker.rotation.RotationHudFeature
+import com.dyetracker.ui.bounce.BounceController
 import com.dyetracker.ui.edit.EditModeKeybind
 import com.dyetracker.ui.hud.HudWidgetHost
 import com.dyetracker.ui.texture.ImageTextureManager
@@ -50,6 +51,10 @@ class DyeTrackerModClient : ClientModInitializer {
         DyeProgressHudFeature.register()
         EditModeKeybind.register()
         DyeProgressPoller.start()
+
+        // Resume DVD-bounce mode in its persisted state before the first frame (PBI 38). Config is
+        // already loaded by the common init; drift positions are seeded lazily on the first render.
+        BounceController.setEnabled(ConfigManager.isBounceEnabled())
 
         ClientLifecycleEvents.CLIENT_STARTED.register { _ -> loadConfiguredOverlays() }
         ClientLifecycleEvents.CLIENT_STOPPING.register { _ ->

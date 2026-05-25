@@ -13,6 +13,7 @@ import com.dyetracker.rotation.DyeSprites
 import com.dyetracker.rotation.RotationPlacementEditor
 import com.dyetracker.rotation.RotationWidgetConfig
 import com.dyetracker.sync.SyncManager
+import com.dyetracker.ui.bounce.BounceController
 import com.dyetracker.ui.edit.WidgetEditScreen
 import com.dyetracker.ui.texture.ImageTextureManager
 import com.mojang.brigadier.CommandDispatcher
@@ -279,6 +280,35 @@ object DyeTrackerCommands {
                             1
                         }
                 )
+                .then(
+                    ClientCommandManager.literal("bounce")
+                        .then(
+                            ClientCommandManager.literal("on")
+                                .executes { context ->
+                                    handleBounceCommand(context.source, true)
+                                    1
+                                }
+                        )
+                        .then(
+                            ClientCommandManager.literal("off")
+                                .executes { context ->
+                                    handleBounceCommand(context.source, false)
+                                    1
+                                }
+                        )
+                        .then(
+                            ClientCommandManager.literal("toggle")
+                                .executes { context ->
+                                    handleBounceCommand(context.source, null)
+                                    1
+                                }
+                        )
+                        // Bare `/dyetracker bounce` toggles.
+                        .executes { context ->
+                            handleBounceCommand(context.source, null)
+                            1
+                        }
+                )
                 .executes { context ->
                     showHelp(context.source)
                     1
@@ -382,6 +412,21 @@ object DyeTrackerCommands {
         // Opens the same shared edit screen as `gif edit`; the rotation widget appears there
         // because it registered a PlacementEditor. The screen is the feedback.
         MinecraftClient.getInstance().setScreen(WidgetEditScreen())
+    }
+
+    /**
+     * Enable/disable/toggle DVD-bounce mode (PBI 38). [target] is the explicit state for `on`/`off`,
+     * or null for the bare/`toggle` form which flips the current live state. Persists the new flag and
+     * applies it to the live [BounceController]; drift positions are never persisted.
+     */
+    private fun handleBounceCommand(source: FabricClientCommandSource, target: Boolean?) {
+        val newState = target ?: !BounceController.isEnabled()
+        BounceController.setEnabled(newState)
+        ConfigManager.setBounceEnabled(newState)
+        source.sendFeedback(
+            Text.literal("Bounce mode: ${if (newState) "ON" else "OFF"}")
+                .formatted(if (newState) Formatting.GREEN else Formatting.YELLOW)
+        )
     }
 
     private fun handleDyeListCommand(source: FabricClientCommandSource) {
@@ -720,6 +765,8 @@ object DyeTrackerCommands {
     private fun handleReloadCommand(source: FabricClientCommandSource) {
         try {
             ConfigManager.load()
+            // Re-apply the persisted bounce flag to the live controller (PBI 38).
+            BounceController.setEnabled(ConfigManager.isBounceEnabled())
             source.sendFeedback(
                 Text.literal("\u2714 Configuration reloaded")
                     .formatted(Formatting.GREEN)
@@ -743,6 +790,17 @@ object DyeTrackerCommands {
                         } else {
                             Text.literal("Not set")
                                 .formatted(Formatting.YELLOW)
+                        }
+                    )
+            )
+            source.sendFeedback(
+                Text.literal("Bounce mode: ")
+                    .formatted(Formatting.GRAY)
+                    .append(
+                        if (ConfigManager.isBounceEnabled()) {
+                            Text.literal("ON").formatted(Formatting.GREEN)
+                        } else {
+                            Text.literal("OFF").formatted(Formatting.YELLOW)
                         }
                     )
             )
@@ -1062,6 +1120,14 @@ object DyeTrackerCommands {
                 .formatted(Formatting.YELLOW)
                 .append(
                     Text.literal(" - Manage single-dye progress widgets")
+                        .formatted(Formatting.GRAY)
+                )
+        )
+        source.sendFeedback(
+            Text.literal("  /dyetracker bounce [on|off|toggle]")
+                .formatted(Formatting.YELLOW)
+                .append(
+                    Text.literal(" - DVD-bounce your HUD widgets around the screen")
                         .formatted(Formatting.GRAY)
                 )
         )
