@@ -1,6 +1,10 @@
 package com.dyetracker.ui.hud
 
 import com.dyetracker.DyeTrackerMod
+import com.dyetracker.ui.bounce.BounceController
+import com.dyetracker.ui.bounce.BounceInput
+import com.dyetracker.ui.bounce.CornerCelebration
+import com.dyetracker.ui.bounce.CornerHit
 import com.dyetracker.ui.core.Rect
 import com.dyetracker.ui.core.RenderContext
 import com.dyetracker.ui.core.Widget
@@ -68,13 +72,87 @@ object HudWidgetHost {
         val screenH = window.scaledHeight
         val renderCtx = RenderContext(context, runningTimeMs, paused)
 
+        // Bounce mode (PBI 38) replaces each visible widget's static position with a drifting one from
+        // the BounceController. When disabled this branch is skipped and the static path below runs
+        // byte-for-byte as before.
+        if (BounceController.isEnabled()) {
+            renderBouncing(renderCtx, entries, screenW, screenH)
+            return
+        }
+
+        // Bounce disabled: drop any leftover celebration particles so a burst in progress when the
+        // mode was turned off can't reappear on re-enable. Cheap no-op once the list is empty.
+        if (CornerCelebration.isActive()) CornerCelebration.clear()
+
         for (entry in entries) {
             if (!entry.placement.visible) continue
             val rect = boundsOf(entry, screenW, screenH) ?: continue
-            drawScaled(renderCtx, entry.widget, rect.x, rect.y, entry.placement.scale)
-            if (firstRenderLogged.add(entry.id)) {
-                DyeTrackerMod.debug("First render of HUD widget '{}'", entry.id)
-            }
+            drawEntryAt(renderCtx, entry, rect.x, rect.y)
+        }
+    }
+
+    /** Draw [entry] at ([x], [y]) with its placement scale, logging the first render once per id. */
+    private fun drawEntryAt(ctx: RenderContext, entry: HudWidgetEntry, x: Int, y: Int) {
+        drawScaled(ctx, entry.widget, x, y, entry.placement.scale)
+        if (firstRenderLogged.add(entry.id)) {
+            DyeTrackerMod.debug("First render of HUD widget '{}'", entry.id)
+        }
+    }
+
+    /**
+     * Bounce-mode render path (PBI 38): position each visible, measurable widget from the
+     * [BounceController] instead of its static placement, advancing the simulation once per frame on
+     * the same pause-aware [runningTimeMs] clock used for sprite animation (so motion freezes while
+     * paused with no unpause catch-up). Widgets with no measured size yet (e.g. a sprite whose texture
+     * isn't uploaded) are skipped exactly as in the static path, and the static [com.dyetracker.ui.core.WidgetPlacement]
+     * is never mutated — the drift is a pure render-time override.
+     */
+    private fun renderBouncing(
+        ctx: RenderContext,
+        entries: List<HudWidgetEntry>,
+        screenW: Int,
+        screenH: Int,
+    ) {
+        val inputs = ArrayList<BounceInput>(entries.size)
+        val drawable = ArrayList<HudWidgetEntry>(entries.size)
+        for (entry in entries) {
+            if (!entry.placement.visible) continue
+            val size = entry.widget.measure()
+            if (size.width <= 0 || size.height <= 0) continue
+            val scale = entry.placement.scale
+            // Seed center is the placement's fractional center in px (the same center boundsOf derives
+            // the top-left from); width/height are the scaled bounds the controller reflects off the
+            // edges so the full widget stays on-screen at any scale.
+            inputs.add(
+                BounceInput(
+                    id = entry.id,
+                    seedCenterX = entry.placement.x * screenW,
+                    seedCenterY = entry.placement.y * screenH,
+                    width = size.width * scale,
+                    height = size.height * scale,
+                ),
+            )
+            drawable.add(entry)
+        }
+
+        val frame = BounceController.advance(inputs, screenW.toFloat(), screenH.toFloat(), runningTimeMs)
+
+        for (entry in drawable) {
+            val topLeft = frame.topLefts[entry.id] ?: continue
+            drawEntryAt(ctx, entry, topLeft.x.roundToInt(), topLeft.y.roundToInt())
+        }
+
+        // Spawn a celebration for each corner hit this frame, then advance + draw the bursts on top
+        // of the widgets (PBI 38, task 38-4).
+        spawnCornerCelebrations(frame.cornerHits)
+        CornerCelebration.drawAndAdvance(ctx)
+    }
+
+    /** Spawn a corner-hit celebration burst for each [hits] entry, anchored to the widget rect. */
+    private fun spawnCornerCelebrations(hits: List<CornerHit>) {
+        for (hit in hits) {
+            CornerCelebration.spawn(hit.x, hit.y, hit.width, hit.height)
+            DyeTrackerMod.debug("Corner hit for HUD widget '{}'", hit.id)
         }
     }
 
