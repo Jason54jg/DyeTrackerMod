@@ -5,7 +5,6 @@ import com.dyetracker.config.ConfigManager
 import com.dyetracker.data.DroppedDye
 import com.dyetracker.data.DungeonFloor
 import com.dyetracker.data.RngDataStore
-import com.dyetracker.data.SlayerType
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.gui.screen.Screen
@@ -74,7 +73,6 @@ object InventoryHandler {
 
     private fun processInventory(screen: HandledScreen<*>, inventoryType: InventoryType) {
         when (inventoryType) {
-            is InventoryType.SlayerRngMeter -> processSlayerMeter(screen, inventoryType.slayerType)
             is InventoryType.DungeonRngMeter -> processDungeonMeter(screen, inventoryType.floor)
             is InventoryType.NucleusRngMeter -> processNucleusMeter(screen)
             is InventoryType.ExperimentationRngMeter -> processExperimentationMeter(screen)
@@ -107,52 +105,6 @@ object InventoryHandler {
                 .formatted(Formatting.GREEN),
             false
         )
-    }
-
-    /**
-     * Process a slayer RNG meter inventory.
-     */
-    private fun processSlayerMeter(screen: HandledScreen<*>, slayerType: SlayerType) {
-        val handler = screen.screenHandler
-        var storedXp = 0L
-        var selectedItem: String? = null
-        var goalXp: Long? = null
-
-        for (slot in handler.slots) {
-            val stack = slot.stack
-            if (stack.isEmpty) continue
-
-            val lore = InventoryUtils.getLore(stack)
-
-            // Check for stored XP
-            val currentXp = InventoryUtils.extractCurrentXp(lore)
-            if (currentXp != null && currentXp > storedXp) {
-                storedXp = currentXp
-            }
-
-            // Check if this is a selected item
-            val selected = InventoryUtils.parseSelectedItem(stack)
-            if (selected != null) {
-                selectedItem = selected.itemName
-                goalXp = selected.goalXp
-                DyeTrackerMod.debug(
-                    "Found selected slayer item: {} for {} (goal: {})",
-                    selectedItem,
-                    slayerType,
-                    goalXp
-                )
-            }
-        }
-
-        // Update XP first (preserves selection), then update selection (preserves XP)
-        if (storedXp > 0) {
-            RngDataStore.updateSlayerXp(slayerType, storedXp)
-        }
-        if (selectedItem != null) {
-            RngDataStore.updateSlayerSelection(slayerType, selectedItem, goalXp ?: 0L)
-        }
-
-        DyeTrackerMod.debug("Updated slayer meter {}: xp={}, item={}", slayerType, storedXp, selectedItem)
     }
 
     /**

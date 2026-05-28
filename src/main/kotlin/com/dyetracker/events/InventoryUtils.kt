@@ -4,7 +4,6 @@ import com.dyetracker.DyeTrackerMod
 import com.dyetracker.data.DroppedDye
 import com.dyetracker.data.DungeonFloor
 import com.dyetracker.data.DyeRotation
-import com.dyetracker.data.SlayerType
 import net.minecraft.inventory.Inventory
 import net.minecraft.item.ItemStack
 import net.minecraft.screen.slot.Slot
@@ -14,7 +13,7 @@ import net.minecraft.text.Text
  * Inventory type detection results.
  */
 sealed class InventoryType {
-    data class SlayerRngMeter(val slayerType: SlayerType) : InventoryType()
+    // PBI 47: SlayerRngMeter removed — slayer dyes are estimated from per-tier boss kills on the backend.
     data class DungeonRngMeter(val floor: DungeonFloor) : InventoryType()
     data object NucleusRngMeter : InventoryType()
     data object ExperimentationRngMeter : InventoryType()
@@ -35,16 +34,6 @@ data class SelectedItemInfo(
  * Utility functions for detecting RNG meter inventory types and parsing item lore.
  */
 object InventoryUtils {
-
-    // Slayer RNG meter title patterns
-    private val SLAYER_TITLE_MAP = mapOf(
-        "Revenant Horror" to SlayerType.REVENANT,
-        "Tarantula Broodfather" to SlayerType.TARANTULA,
-        "Sven Packmaster" to SlayerType.SVEN,
-        "Voidgloom Seraph" to SlayerType.VOIDGLOOM,
-        "Inferno Demonlord" to SlayerType.INFERNO,
-        "Riftstalker Bloodfiend" to SlayerType.RIFTSTALKER
-    )
 
     // Dungeon RNG meter title patterns
     private const val M5_TITLE = "Master Mode Floor V"
@@ -110,13 +99,6 @@ object InventoryUtils {
             return null
         }
 
-        // Check for slayer types
-        for ((pattern, slayerType) in SLAYER_TITLE_MAP) {
-            if (cleanTitle.contains(pattern)) {
-                return InventoryType.SlayerRngMeter(slayerType)
-            }
-        }
-
         // Check for dungeon floors
         when {
             cleanTitle.contains(M5_TITLE) -> return InventoryType.DungeonRngMeter(DungeonFloor.M5)
@@ -128,20 +110,6 @@ object InventoryUtils {
             return InventoryType.NucleusRngMeter
         }
 
-        return null
-    }
-
-    /**
-     * Parse the slayer type from an inventory title.
-     * Returns null if not a slayer RNG meter.
-     */
-    fun parseSlayerType(title: String): SlayerType? {
-        val cleanTitle = stripFormatting(title)
-        for ((pattern, slayerType) in SLAYER_TITLE_MAP) {
-            if (cleanTitle.contains(pattern)) {
-                return slayerType
-            }
-        }
         return null
     }
 
