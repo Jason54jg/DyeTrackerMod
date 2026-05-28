@@ -5,7 +5,6 @@ import com.dyetracker.auth.AccountVerification
 import com.dyetracker.config.ConfigManager
 import com.dyetracker.data.DungeonFloor
 import com.dyetracker.data.RngDataStore
-import com.dyetracker.data.SlayerType
 import com.dyetracker.dyeprogress.DyeProgressAdder
 import com.dyetracker.dyeprogress.DyeProgressPlacementEditor
 import com.dyetracker.overlay.OverlayAddPipeline
@@ -858,31 +857,6 @@ object DyeTrackerCommands {
             Text.literal("=== RNG Data ===")
                 .formatted(Formatting.GOLD, Formatting.BOLD)
         )
-
-        // Show slayer meters
-        if (data.slayerMeters.isNotEmpty()) {
-            source.sendFeedback(
-                Text.literal("Slayer RNG Meters:")
-                    .formatted(Formatting.AQUA)
-            )
-            for ((slayerType, meter) in data.slayerMeters) {
-                val itemInfo = if (meter.selectedItem != null) {
-                    " [${meter.selectedItem}: ${formatXp(meter.goalXp ?: 0)} goal]"
-                } else ""
-                source.sendFeedback(
-                    Text.literal("  ${slayerType.name}: ")
-                        .formatted(Formatting.GRAY)
-                        .append(
-                            Text.literal("${formatXp(meter.storedXp)} XP")
-                                .formatted(Formatting.WHITE)
-                        )
-                        .append(
-                            Text.literal(itemInfo)
-                                .formatted(Formatting.DARK_GRAY)
-                        )
-                )
-            }
-        }
 
         // Show dungeon meters
         if (data.dungeonMeters.isNotEmpty()) {

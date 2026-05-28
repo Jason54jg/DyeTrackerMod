@@ -9,8 +9,6 @@ import com.dyetracker.data.DungeonRngMeter
 import com.dyetracker.data.ExperimentationRngMeter
 import com.dyetracker.data.MineshaftPity
 import com.dyetracker.data.NucleusRngMeter
-import com.dyetracker.data.SlayerRngMeter
-import com.dyetracker.data.SlayerType
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -19,7 +17,7 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class SyncRngDataRequest(
-    val slayerMeters: Map<SlayerType, SlayerRngMeter> = emptyMap(),
+    // PBI 47: slayerMeters removed — the mod no longer captures or sends slayer RNG-meter data.
     val dungeonMeters: Map<DungeonFloor, DungeonRngMeter> = emptyMap(),
     val nucleusMeter: NucleusRngMeter? = null,
     val experimentationMeter: ExperimentationRngMeter? = null,

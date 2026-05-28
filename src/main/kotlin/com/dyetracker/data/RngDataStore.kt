@@ -17,7 +17,6 @@ fun interface RngDataChangeListener {
  */
 object RngDataStore {
 
-    private val slayerMeters = ConcurrentHashMap<SlayerType, SlayerRngMeter>()
     private val dungeonMeters = ConcurrentHashMap<DungeonFloor, DungeonRngMeter>()
 
     @Volatile
@@ -59,9 +58,6 @@ object RngDataStore {
         val loadedData = DataPersistence.load()
         if (loadedData != null) {
             // Populate internal state from loaded data
-            loadedData.slayerMeters.forEach { (type, meter) ->
-                slayerMeters[type] = meter
-            }
             loadedData.dungeonMeters.forEach { (floor, meter) ->
                 dungeonMeters[floor] = meter
             }
@@ -111,36 +107,6 @@ object RngDataStore {
                 DyeTrackerMod.error("Error notifying RNG data listener", e)
             }
         }
-    }
-
-    /**
-     * Update the stored XP for a slayer type.
-     * Preserves any existing selection data.
-     */
-    fun updateSlayerXp(slayerType: SlayerType, xp: Long) {
-        slayerMeters.compute(slayerType) { _, existing ->
-            if (existing != null) {
-                existing.copy(storedXp = xp)
-            } else {
-                SlayerRngMeter(slayerType = slayerType, storedXp = xp)
-            }
-        }
-        notifyListeners()
-    }
-
-    /**
-     * Update the selected item for a slayer type.
-     * Preserves any existing XP data.
-     */
-    fun updateSlayerSelection(slayerType: SlayerType, item: String, goalXp: Long) {
-        slayerMeters.compute(slayerType) { _, existing ->
-            if (existing != null) {
-                existing.copy(selectedItem = item, goalXp = goalXp)
-            } else {
-                SlayerRngMeter(slayerType = slayerType, storedXp = 0, selectedItem = item, goalXp = goalXp)
-            }
-        }
-        notifyListeners()
     }
 
     /**
@@ -254,7 +220,6 @@ object RngDataStore {
      */
     fun getData(): PlayerRngData {
         return PlayerRngData(
-            slayerMeters = slayerMeters.toMap(),
             dungeonMeters = dungeonMeters.toMap(),
             nucleusMeter = nucleusMeter,
             experimentationMeter = experimentationMeter,
@@ -270,7 +235,6 @@ object RngDataStore {
      * Clear all stored RNG data.
      */
     fun clear() {
-        slayerMeters.clear()
         dungeonMeters.clear()
         nucleusMeter = null
         experimentationMeter = null
