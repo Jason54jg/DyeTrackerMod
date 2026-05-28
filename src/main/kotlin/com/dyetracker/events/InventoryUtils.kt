@@ -18,7 +18,7 @@ sealed class InventoryType {
     data class DungeonRngMeter(val floor: DungeonFloor) : InventoryType()
     data object NucleusRngMeter : InventoryType()
     data object ExperimentationRngMeter : InventoryType()
-    data object Commissions : InventoryType()
+    data object CommissionMilestones : InventoryType()
     data object VincentDyeCollection : InventoryType()
     data object VincentDyeRotation : InventoryType()
 }
@@ -62,13 +62,15 @@ object InventoryUtils {
     // collide with the "Dye Compendium" compendium screen).
     private const val ROTATION_TITLE = "Dyes"
 
-    // Commissions GUI title
-    private const val COMMISSIONS_TITLE = "Commissions"
+    // Commission Milestones GUI title (the sub-screen reached from the main Commissions menu;
+    // the "Milestone I Rewards" item inside it shows "X/5" stably even for maxed players).
+    private const val COMMISSION_MILESTONES_TITLE = "Commission Milestones"
 
-    // Commission Milestones item name
-    private const val COMMISSION_MILESTONES_ITEM = "Commission Milestones"
+    // Item name inside the Commission Milestones GUI whose lore carries the absolute completed
+    // count. Milestone I's threshold (5) never changes, so the "X/5" pattern is always present.
+    private const val MILESTONE_I_REWARDS_ITEM = "Milestone I Rewards"
 
-    // Pattern to extract completed count from milestone lore (e.g., "208/250")
+    // Pattern to extract completed count from Milestone I Rewards lore (e.g., "208/5")
     private val MILESTONE_COUNT_PATTERN = Regex("""(\d[\d,]*)/[\d,]+""")
 
     // Lore patterns - matches "31,900/75M" or "1,812/8.3k" format
@@ -93,9 +95,9 @@ object InventoryUtils {
             return InventoryType.VincentDyeRotation
         }
 
-        // Check for Commissions GUI
-        if (cleanTitle == COMMISSIONS_TITLE) {
-            return InventoryType.Commissions
+        // Check for Commission Milestones GUI
+        if (cleanTitle == COMMISSION_MILESTONES_TITLE) {
+            return InventoryType.CommissionMilestones
         }
 
         // Check for experimentation table first (uses "RNG" not "RNG Meter")
@@ -247,12 +249,14 @@ object InventoryUtils {
     }
 
     /**
-     * Check if an item is the "Commission Milestones" item and extract the total completed count.
-     * Parses lore for patterns like "208/250" where the first number is the total completed.
+     * Check if an item is the "Milestone I Rewards" item and extract the total completed count.
+     * Parses lore for patterns like "208/5" where the first number is the total completed.
+     * Milestone I is used because its threshold (5) never changes — the absolute count is shown
+     * stably for all players, including those who have maxed every milestone tier.
      */
     fun parseCommissionMilestoneCount(itemStack: ItemStack): Int? {
         val name = stripFormatting(itemStack.name?.string ?: return null)
-        if (!name.contains(COMMISSION_MILESTONES_ITEM)) return null
+        if (!name.contains(MILESTONE_I_REWARDS_ITEM)) return null
 
         val lore = getLore(itemStack)
         for (line in lore) {

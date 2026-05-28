@@ -78,7 +78,7 @@ object InventoryHandler {
             is InventoryType.DungeonRngMeter -> processDungeonMeter(screen, inventoryType.floor)
             is InventoryType.NucleusRngMeter -> processNucleusMeter(screen)
             is InventoryType.ExperimentationRngMeter -> processExperimentationMeter(screen)
-            is InventoryType.Commissions -> processCommissions(screen)
+            is InventoryType.CommissionMilestones -> processCommissionMilestones(screen)
             is InventoryType.VincentDyeRotation -> processDyeRotation(screen)
             is InventoryType.VincentDyeCollection -> {} // Handled by scheduleCompendiumScan
         }
@@ -229,10 +229,13 @@ object InventoryHandler {
     }
 
     /**
-     * Process a Commissions inventory to capture the total commission count for Nyanza Dye.
-     * Scans for the "Commission Milestones" item and parses the total completed count from its lore.
+     * Process a Commission Milestones inventory to capture the total commission count for Nyanza
+     * Dye. Scans for the "Milestone I Rewards" item and parses the absolute completed count from
+     * its lore (e.g. "208/5"). Milestone I is used because its threshold never changes, so the
+     * count is shown stably even for maxed players — unlike the dynamic "Commission Milestones"
+     * item in the parent Commissions GUI, which drops the count once every tier is complete.
      */
-    private fun processCommissions(screen: HandledScreen<*>) {
+    private fun processCommissionMilestones(screen: HandledScreen<*>) {
         val handler = screen.screenHandler
 
         for (slot in handler.slots) {
@@ -247,7 +250,7 @@ object InventoryHandler {
             }
         }
 
-        DyeTrackerMod.debug("Commission Milestones item not found in Commissions GUI")
+        DyeTrackerMod.debug("Milestone I Rewards item not found in Commission Milestones GUI")
     }
 
     /**
