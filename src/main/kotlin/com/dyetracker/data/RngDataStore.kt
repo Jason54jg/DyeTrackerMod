@@ -40,6 +40,12 @@ object RngDataStore {
     @Volatile
     private var dyeCollection: DyeCollection? = null
 
+    // PBI 42: persisted union of every visitor seen in the Logbook, keyed by name. The per-tier
+    // copperDye snapshot is derived from this; merging by name keeps it idempotent across paginated
+    // page-turns, re-opens, and restarts. Local-only — never included in the sync request.
+    @Volatile
+    private var visitorLogbook: VisitorLogbookData? = null
+
     private val listeners = CopyOnWriteArrayList<RngDataChangeListener>()
 
     @Volatile
@@ -68,6 +74,7 @@ object RngDataStore {
             copperDye = loadedData.copperDye
             nyanzaDye = loadedData.nyanzaDye
             dyeCollection = loadedData.dyeCollection
+            visitorLogbook = loadedData.visitorLogbook
 
             DyeTrackerMod.info("RNG data loaded from disk")
         }
@@ -173,16 +180,35 @@ object RngDataStore {
     }
 
     /**
-     * Increment the visitor accept count for a specific rarity tier.
+     * Merge a Visitor's Logbook capture into the persisted visitor union and re-derive the per-tier
+     * Copper "visitors seen" snapshot (PBI 42).
+     *
+     * The Logbook is paginated and Hypixel re-creates the screen on each page-turn, so a single
+     * capture only ever sees one page's worth of visitors. Merging by visitor name (last-seen wins)
+     * accumulates them across page-turns AND across sessions/restarts; because `timesVisited` is an
+     * absolute per-visitor count, re-scanning a visitor overwrites rather than adds — so totals are
+     * idempotent and never double-count. The per-tier [CopperDyeData.visitorsSeen] snapshot is then
+     * derived from the FULL union, so viewing only part of the Logbook never shrinks it.
+     *
+     * Empty input is a no-op (a mis-identified or half-loaded screen must not clobber prior data).
+     *
+     * @param sessionVisitors visitors parsed this capture, keyed by [VisitorEntry.name].
      */
-    fun incrementVisitorAccept(rarity: VisitorRarity) {
-        val current = copperDye ?: CopperDyeData()
-        val currentCount = current.visitorAccepts[rarity] ?: 0
-        val updatedAccepts = current.visitorAccepts.toMutableMap()
-        updatedAccepts[rarity] = currentCount + 1
-        copperDye = current.copy(visitorAccepts = updatedAccepts)
+    fun mergeVisitorsSeen(sessionVisitors: Map<String, VisitorEntry>) {
+        if (sessionVisitors.isEmpty()) {
+            return
+        }
+        val merged = (visitorLogbook?.visitors ?: emptyMap()).toMutableMap()
+        merged.putAll(sessionVisitors) // dedup by name; last-seen wins (idempotent absolute counts)
+        visitorLogbook = VisitorLogbookData(visitors = merged)
+        copperDye = CopperDyeData(visitorsSeen = aggregateVisitorsSeenByTier(merged.values))
         notifyListeners()
     }
+
+    /**
+     * Get the current persisted visitor-union snapshot (PBI 42), or null if none captured yet.
+     */
+    fun getVisitorLogbook(): VisitorLogbookData? = visitorLogbook
 
     /**
      * Update the total commissions completed count for Nyanza Dye.
@@ -227,7 +253,8 @@ object RngDataStore {
             archfiendDye = archfiendDye,
             copperDye = copperDye,
             nyanzaDye = nyanzaDye,
-            dyeCollection = dyeCollection
+            dyeCollection = dyeCollection,
+            visitorLogbook = visitorLogbook
         )
     }
 
@@ -243,6 +270,7 @@ object RngDataStore {
         copperDye = null
         nyanzaDye = null
         dyeCollection = null
+        visitorLogbook = null
         notifyListeners()
     }
 

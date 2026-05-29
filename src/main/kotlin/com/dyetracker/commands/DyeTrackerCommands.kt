@@ -981,7 +981,7 @@ object DyeTrackerCommands {
             )
         }
 
-        // Show copper dye visitor accepts
+        // Show copper dye visitors seen (per-tier snapshot from the Visitor's Logbook)
         data.copperDye?.let { dye ->
             source.sendFeedback(
                 Text.literal("Copper Dye:")
@@ -995,13 +995,13 @@ object DyeTrackerCommands {
                 "MYTHIC" to "1/800",
                 "SPECIAL" to "1/500"
             )
-            for ((rarity, count) in dye.visitorAccepts) {
+            for ((rarity, count) in dye.visitorsSeen) {
                 val dropRate = dropRates[rarity.name] ?: "???"
                 source.sendFeedback(
                     Text.literal("  ${rarity.name}: ")
                         .formatted(Formatting.GRAY)
                         .append(
-                            Text.literal("$count accepts")
+                            Text.literal("$count seen")
                                 .formatted(Formatting.WHITE)
                         )
                         .append(

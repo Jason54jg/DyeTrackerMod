@@ -4,6 +4,8 @@ import com.dyetracker.DyeTrackerMod
 import com.dyetracker.data.DroppedDye
 import com.dyetracker.data.DungeonFloor
 import com.dyetracker.data.DyeRotation
+import com.dyetracker.data.VisitorEntry
+import com.dyetracker.data.VisitorRarity
 import net.minecraft.inventory.Inventory
 import net.minecraft.item.ItemStack
 import net.minecraft.screen.slot.Slot
@@ -20,6 +22,8 @@ sealed class InventoryType {
     data object CommissionMilestones : InventoryType()
     data object VincentDyeCollection : InventoryType()
     data object VincentDyeRotation : InventoryType()
+    // PBI 42: Garden "Visitor's Logbook" GUI — Copper Dye is sourced from every visitor seen.
+    data object VisitorLogbook : InventoryType()
 }
 
 /**
@@ -29,6 +33,7 @@ data class SelectedItemInfo(
     val itemName: String,
     val goalXp: Long?
 )
+
 
 /**
  * Utility functions for detecting RNG meter inventory types and parsing item lore.
@@ -54,6 +59,10 @@ object InventoryUtils {
     // Commission Milestones GUI title (the sub-screen reached from the main Commissions menu;
     // the "Milestone I Rewards" item inside it shows "X/5" stably even for maxed players).
     private const val COMMISSION_MILESTONES_TITLE = "Commission Milestones"
+
+    // Visitor's Logbook GUI title (PBI 42). Matched with `contains` (not exact) so a paginated
+    // title carrying a page-indicator suffix still resolves; no other screen contains this phrase.
+    private const val VISITOR_LOGBOOK_TITLE = "Visitor's Logbook"
 
     // Item name inside the Commission Milestones GUI whose lore carries the absolute completed
     // count. Milestone I's threshold (5) never changes, so the "X/5" pattern is always present.
@@ -87,6 +96,11 @@ object InventoryUtils {
         // Check for Commission Milestones GUI
         if (cleanTitle == COMMISSION_MILESTONES_TITLE) {
             return InventoryType.CommissionMilestones
+        }
+
+        // Check for the Garden Visitor's Logbook GUI (PBI 42)
+        if (cleanTitle.contains(VISITOR_LOGBOOK_TITLE)) {
+            return InventoryType.VisitorLogbook
         }
 
         // Check for experimentation table first (uses "RNG" not "RNG Meter")
@@ -512,6 +526,91 @@ object InventoryUtils {
         val multiplier = match.groupValues[1].toIntOrNull() ?: return null
         val year = match.groupValues[2].toIntOrNull() ?: return null
         return multiplier to year
+    }
+
+    // ==================== Visitor's Logbook Parsing (PBI 42) ====================
+
+    // Authoritative per-visitor "seen" count. Anchored on "Times Visited:" so it never matches
+    // the "Offers Accepted:" line nor the third-party "Times Denied:" header overlay — that header
+    // comes from a separate mod and is intentionally NOT parsed (it must not contribute to totals).
+    private val TIMES_VISITED_PATTERN = Regex("""Times Visited:\s*(\d+)""")
+
+    // Lookup of the five visitor rarity tiers by their exact (caps) name, for matching the
+    // standalone rarity lore line. An unrecognized 6th tier yields null (skipped, not mis-bucketed).
+    private val VISITOR_RARITY_BY_NAME: Map<String, VisitorRarity> =
+        VisitorRarity.values().associateBy { it.name }
+
+    /**
+     * Parse the "Times Visited: N" value from already-stripped lore lines. Pure (no Minecraft
+     * types) so it is unit-testable. Returns null if no "Times Visited:" line is present. Does NOT
+     * match "Offers Accepted:" or the "Times Denied:" header.
+     */
+    fun extractTimesVisited(loreLines: List<String>): Int? {
+        for (line in loreLines) {
+            val match = TIMES_VISITED_PATTERN.find(line) ?: continue
+            return match.groupValues[1].toIntOrNull()
+        }
+        return null
+    }
+
+    /**
+     * Find the standalone rarity line (one of the five [VisitorRarity] names) in already-stripped
+     * lore lines. Matching the explicit caps line is more robust than inferring from the visitor
+     * name's color code. Returns null when no line matches (an unknown/6th tier is skipped).
+     */
+    fun extractVisitorRarity(loreLines: List<String>): VisitorRarity? {
+        for (line in loreLines) {
+            val rarity = VISITOR_RARITY_BY_NAME[line.trim()]
+            if (rarity != null) return rarity
+        }
+        return null
+    }
+
+    /**
+     * Parse a single Logbook visitor item into a [VisitorEntry]. Returns an entry only when BOTH a
+     * recognizable rarity line AND a "Times Visited" line are present; otherwise null — so header,
+     * filler, and navigation items (which carry neither) are naturally skipped.
+     */
+    fun parseVisitorEntry(name: String, loreLines: List<String>): VisitorEntry? {
+        val rarity = extractVisitorRarity(loreLines) ?: return null
+        val timesVisited = extractTimesVisited(loreLines) ?: return null
+        return VisitorEntry(name = name, rarity = rarity, timesVisited = timesVisited)
+    }
+
+    /**
+     * Merge a page's worth of [VisitorEntry]s into an accumulator keyed by visitor [name].
+     * De-dups across re-scans/pages: a name already present is overwritten with the latest value
+     * (last-seen wins), so paging back and forth never double-counts a visitor.
+     */
+    fun accumulateVisitors(
+        existing: Map<String, VisitorEntry>,
+        pageEntries: List<VisitorEntry>
+    ): Map<String, VisitorEntry> {
+        val merged = existing.toMutableMap()
+        for (entry in pageEntries) {
+            merged[entry.name] = entry
+        }
+        return merged
+    }
+
+    /**
+     * Extract all visitor entries from a Visitor's Logbook screen's slots. Thin MC-typed shell
+     * (analogous to [extractDyeCollection]): reads each slot's name + lore and delegates to the
+     * pure [parseVisitorEntry]. Non-visitor slots (filler/navigation) resolve to null and are
+     * skipped.
+     */
+    fun extractVisitorEntriesFromSlots(slots: Iterable<Slot>): List<VisitorEntry> {
+        val entries = mutableListOf<VisitorEntry>()
+        for (slot in slots) {
+            val stack = slot.stack
+            if (stack.isEmpty) continue
+
+            val name = stripFormatting(stack.name?.string ?: continue)
+            val loreLines = getLore(stack).map { stripFormatting(it.string) }
+            val entry = parseVisitorEntry(name, loreLines)
+            if (entry != null) entries.add(entry)
+        }
+        return entries
     }
 
     /**
