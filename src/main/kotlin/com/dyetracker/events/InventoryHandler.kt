@@ -7,18 +7,34 @@ import com.dyetracker.data.DungeonFloor
 import com.dyetracker.data.RngDataStore
 import com.dyetracker.data.VisitorEntry
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
+//? if >=26.1 {
+/*import net.minecraft.client.Minecraft as MinecraftClient
+import net.minecraft.client.gui.screens.Screen
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen as HandledScreen
+import net.minecraft.world.inventory.Slot
+import net.minecraft.network.chat.Component as Text
+import net.minecraft.ChatFormatting as Formatting
+*///?} else {
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.gui.screen.Screen
 import net.minecraft.client.gui.screen.ingame.HandledScreen
 import net.minecraft.screen.slot.Slot
 import net.minecraft.text.Text
 import net.minecraft.util.Formatting
+//?}
 
 /**
  * Handles inventory screen events to capture RNG meter data.
  * Detects when RNG meter inventories are opened and scans for selected items.
  */
 object InventoryHandler {
+
+    // Yarn's Slot.stack and HandledScreen.screenHandler were renamed to getItem()/getMenu() on the
+    // official mappings 26.x uses; these shims keep every call site below unchanged.
+    //? if >=26.1 {
+    /*private val Slot.stack get() = item
+    private val HandledScreen<*>.screenHandler get() = menu
+    *///?}
 
     // Delay in ticks before scanning inventory (allows GUI to fully load)
     private const val SCAN_DELAY_TICKS = 5
@@ -109,11 +125,18 @@ object InventoryHandler {
         ConfigManager.updateDyeRotation(rotation)
         DyeTrackerMod.info("Captured dye rotation ({} dyes): {}", rotation.dyeIds.size, rotation.dyeIds)
 
+        //? if >=26.1 {
+        /*player.sendSystemMessage(
+            Text.literal("Captured current dye rotation (${rotation.dyeIds.size} dyes)")
+                .withStyle(Formatting.GREEN),
+        )
+        *///?} else {
         player.sendMessage(
             Text.literal("Captured current dye rotation (${rotation.dyeIds.size} dyes)")
                 .formatted(Formatting.GREEN),
             false
         )
+        //?}
     }
 
     /**

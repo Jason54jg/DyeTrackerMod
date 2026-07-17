@@ -3,7 +3,11 @@ package com.dyetracker.events
 import com.dyetracker.DyeTrackerMod
 import com.dyetracker.data.RngDataStore
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
+//? if >=26.1 {
+/*import net.minecraft.client.Minecraft as MinecraftClient
+*///?} else {
 import net.minecraft.client.MinecraftClient
+//?}
 
 /**
  * Handles tablist parsing to capture Glacite Mineshaft pity value.
@@ -38,11 +42,20 @@ object TablistHandler {
     }
 
     private fun pollTablist(client: MinecraftClient) {
+        //? if >=26.1 {
+        /*val networkHandler = client.connection ?: return
+        val playerList = networkHandler.listedOnlinePlayers ?: return
+        *///?} else {
         val networkHandler = client.networkHandler ?: return
         val playerList = networkHandler.playerList ?: return
+        //?}
 
         for (entry in playerList) {
+            //? if >=26.1 {
+            /*val displayName = entry.tabListDisplayName ?: continue
+            *///?} else {
             val displayName = entry.displayName ?: continue
+            //?}
             val text = displayName.string
 
             // Strip color codes for matching

@@ -1,6 +1,10 @@
 package com.dyetracker.ui.core
 
+//? if >=26.1 {
+/*import net.minecraft.client.gui.GuiGraphicsExtractor as DrawContext
+*///?} else {
 import net.minecraft.client.gui.DrawContext
+//?}
 
 /**
  * Per-frame render context handed to every [Widget.draw]. Bundles the [DrawContext] with

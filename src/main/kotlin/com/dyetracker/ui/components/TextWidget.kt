@@ -6,7 +6,11 @@ import com.dyetracker.ui.core.Size
 import com.dyetracker.ui.core.UiDraw
 import com.dyetracker.ui.core.Widget
 import com.dyetracker.ui.theme.UiTheme
+//? if >=26.1 {
+/*import net.minecraft.client.Minecraft as MinecraftClient
+*///?} else {
 import net.minecraft.client.MinecraftClient
+//?}
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -28,11 +32,23 @@ class TextWidget(
     private val minWidth: Int = 0,
 ) : Widget {
 
+    //? if >=26.1 {
+    /*private val textRenderer get() = MinecraftClient.getInstance().font
+    *///?} else {
     private val textRenderer get() = MinecraftClient.getInstance().textRenderer
+    //?}
 
+    //? if >=26.1 {
+    /*private fun scaledTextWidth(): Int = (textRenderer.width(text) * scale).roundToInt()
+    *///?} else {
     private fun scaledTextWidth(): Int = (textRenderer.getWidth(text) * scale).roundToInt()
+    //?}
 
+    //? if >=26.1 {
+    /*private fun scaledTextHeight(): Int = (textRenderer.lineHeight * scale).roundToInt()
+    *///?} else {
     private fun scaledTextHeight(): Int = (textRenderer.fontHeight * scale).roundToInt()
+    //?}
 
     override fun measure(): Size = Size(max(scaledTextWidth(), minWidth), scaledTextHeight())
 

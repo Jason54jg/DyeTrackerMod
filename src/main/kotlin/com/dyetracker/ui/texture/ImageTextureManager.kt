@@ -6,10 +6,17 @@ package com.dyetracker.ui.texture
 // and `release` accept any-thread calls and schedule via `MinecraftClient.execute`.
 
 import com.dyetracker.DyeTrackerMod
+//? if >=26.1 {
+/*import net.minecraft.client.Minecraft as MinecraftClient
+import com.mojang.blaze3d.platform.NativeImage
+import net.minecraft.client.renderer.texture.DynamicTexture as NativeImageBackedTexture
+import net.minecraft.resources.Identifier
+*///?} else {
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.texture.NativeImage
 import net.minecraft.client.texture.NativeImageBackedTexture
 import net.minecraft.util.Identifier
+//?}
 import java.awt.image.BufferedImage
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
@@ -79,9 +86,17 @@ object ImageTextureManager {
 
                 for ((index, frame) in image.frames.withIndex()) {
                     val nativeImage = bufferedImageToNativeImage(frame.image)
+                    //? if >=26.1 {
+                    /*val frameId = Identifier.fromNamespaceAndPath(DyeTrackerMod.MOD_ID, "${FRAME_ID_PREFIX}${sanitized}${FRAME_ID_INFIX}$index")
+                    *///?} else {
                     val frameId = Identifier.of(DyeTrackerMod.MOD_ID, "${FRAME_ID_PREFIX}${sanitized}${FRAME_ID_INFIX}$index")
+                    //?}
                     val texture = NativeImageBackedTexture({ frameId.toString() }, nativeImage)
+                    //? if >=26.1 {
+                    /*client.textureManager.register(frameId, texture)
+                    *///?} else {
                     client.textureManager.registerTexture(frameId, texture)
+                    //?}
                     frameIds.add(frameId)
                     textures.add(texture)
                 }
@@ -124,7 +139,11 @@ object ImageTextureManager {
     /** Release an image's textures. Schedules to render thread if needed. */
     fun release(id: String) {
         val client = MinecraftClient.getInstance()
+        //? if >=26.1 {
+        /*if (client.isSameThread()) {
+        *///?} else {
         if (client.isOnThread) {
+        //?}
             releaseInternal(id)
         } else {
             client.execute { releaseInternal(id) }
@@ -134,7 +153,11 @@ object ImageTextureManager {
     /** Release every image; called on mod/client shutdown. */
     fun releaseAll() {
         val client = MinecraftClient.getInstance()
+        //? if >=26.1 {
+        /*if (client.isSameThread()) {
+        *///?} else {
         if (client.isOnThread) {
+        //?}
             images.keys.toList().forEach(::releaseInternal)
         } else {
             client.execute { images.keys.toList().forEach(::releaseInternal) }
@@ -146,9 +169,13 @@ object ImageTextureManager {
         val client = MinecraftClient.getInstance()
         for (frameId in state.frameIds) {
             try {
-                // destroyTexture invokes texture.close() internally; do NOT also call
+                // destroyTexture/release invokes texture.close() internally; do NOT also call
                 // state.textures[i].close() — that would be a double-close on NativeImage.
+                //? if >=26.1 {
+                /*client.textureManager.release(frameId)
+                *///?} else {
                 client.textureManager.destroyTexture(frameId)
+                //?}
             } catch (e: Throwable) {
                 DyeTrackerMod.warn("destroyTexture failed for {}: {}", frameId, e.message ?: e.javaClass.simpleName)
             }
@@ -235,7 +262,11 @@ object ImageTextureManager {
         var i = 0
         for (y in 0 until h) {
             for (x in 0 until w) {
+                //? if >=26.1 {
+                /*ni.setPixel(x, y, argbArray[i++])
+                *///?} else {
                 ni.setColorArgb(x, y, argbArray[i++])
+                //?}
             }
         }
         return ni

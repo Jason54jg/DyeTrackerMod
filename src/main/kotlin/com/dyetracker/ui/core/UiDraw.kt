@@ -1,9 +1,16 @@
 package com.dyetracker.ui.core
 
+//? if >=26.1 {
+/*import net.minecraft.client.gui.GuiGraphicsExtractor as DrawContext
+import net.minecraft.client.gui.Font as TextRenderer
+import net.minecraft.client.renderer.RenderPipelines
+import net.minecraft.resources.Identifier
+*///?} else {
 import net.minecraft.client.font.TextRenderer
 import net.minecraft.client.gl.RenderPipelines
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.util.Identifier
+//?}
 import kotlin.math.roundToInt
 
 /**
@@ -79,19 +86,39 @@ object UiDraw {
         argb: Int,
         shadow: Boolean = true,
         scale: Float = 1f,
+        //? if >=26.1 {
+        /*availableWidth: Int = (textRenderer.width(text) * scale).roundToInt(),
+        *///?} else {
         availableWidth: Int = (textRenderer.getWidth(text) * scale).roundToInt(),
+        //?}
         alignment: HorizontalAlignment = HorizontalAlignment.START,
     ) {
+        //? if >=26.1 {
+        /*val textWidth = (textRenderer.width(text) * scale).roundToInt()
+        *///?} else {
         val textWidth = (textRenderer.getWidth(text) * scale).roundToInt()
+        //?}
         val drawX = x + alignment.offset(availableWidth, textWidth)
         if (scale == 1f) {
+            //? if >=26.1 {
+            /*context.text(textRenderer, text, drawX, y, argb, shadow)
+            *///?} else {
             context.drawText(textRenderer, text, drawX, y, argb, shadow)
+            //?}
         } else {
+            //? if >=26.1 {
+            /*val matrices = context.pose()
+            *///?} else {
             val matrices = context.matrices
+            //?}
             matrices.pushMatrix()
             matrices.translate(drawX.toFloat(), y.toFloat())
             matrices.scale(scale, scale)
+            //? if >=26.1 {
+            /*context.text(textRenderer, text, 0, 0, argb, shadow)
+            *///?} else {
             context.drawText(textRenderer, text, 0, 0, argb, shadow)
+            //?}
             matrices.popMatrix()
         }
     }
@@ -113,7 +140,11 @@ object UiDraw {
         srcHeight: Int,
     ) {
         if (destWidth <= 0 || destHeight <= 0 || srcWidth <= 0 || srcHeight <= 0) return
+        //? if >=26.1 {
+        /*context.blit(
+        *///?} else {
         context.drawTexture(
+        //?}
             RenderPipelines.GUI_TEXTURED,
             textureId,
             x, y,

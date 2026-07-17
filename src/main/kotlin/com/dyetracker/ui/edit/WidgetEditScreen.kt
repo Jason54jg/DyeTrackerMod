@@ -8,6 +8,19 @@ import com.dyetracker.ui.hud.HudWidgetEntry
 import com.dyetracker.ui.hud.HudWidgetHost
 import com.dyetracker.ui.hud.HudWidgetRegistry
 import com.dyetracker.ui.theme.UiTheme
+//? if >=26.1 {
+/*import net.minecraft.client.Minecraft as MinecraftClient
+import net.minecraft.client.input.MouseButtonEvent as Click
+import net.minecraft.client.gui.GuiGraphicsExtractor as DrawContext
+import net.minecraft.client.gui.components.Renderable as Drawable
+import net.minecraft.client.gui.components.events.GuiEventListener as Element
+import net.minecraft.client.gui.narration.NarratableEntry as Selectable
+import net.minecraft.client.gui.screens.Screen
+import net.minecraft.client.gui.components.Button as ButtonWidget
+import net.minecraft.client.input.KeyEvent as KeyInput
+import net.minecraft.network.chat.Component as Text
+import net.minecraft.util.Util
+*///?} else {
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.gui.Click
 import net.minecraft.client.gui.DrawContext
@@ -19,6 +32,7 @@ import net.minecraft.client.gui.widget.ButtonWidget
 import net.minecraft.client.input.KeyInput
 import net.minecraft.text.Text
 import net.minecraft.util.Util
+//?}
 import org.lwjgl.glfw.GLFW
 import kotlin.math.max
 import kotlin.math.min
@@ -64,23 +78,39 @@ class WidgetEditScreen : Screen(Text.literal(TITLE)) {
         var buttonY = TOOLBAR_TOP_PX
         for (action in EditScreenActionRegistry.all()) {
             val button = ButtonWidget.builder(Text.literal(action.label)) { activateAction(action) }
+                //? if >=26.1 {
+                /*.bounds(width - TOOLBAR_BUTTON_WIDTH - TOOLBAR_MARGIN_PX, buttonY, TOOLBAR_BUTTON_WIDTH, CONTROL_HEIGHT_PX)
+                *///?} else {
                 .dimensions(width - TOOLBAR_BUTTON_WIDTH - TOOLBAR_MARGIN_PX, buttonY, TOOLBAR_BUTTON_WIDTH, CONTROL_HEIGHT_PX)
+                //?}
                 .build()
+            //? if >=26.1 {
+            /*addRenderableWidget(button)
+            *///?} else {
             addDrawableChild(button)
+            //?}
             buttonY += CONTROL_HEIGHT_PX + TOOLBAR_GAP_PX
         }
     }
 
     private fun activateAction(action: EditScreenAction) {
         activeAction = action
+        //? if >=26.1 {
+        /*rebuildWidgets()
+        *///?} else {
         clearAndInit()
+        //?}
     }
 
     /** Dismiss the active action (cancel its work) and return to normal editing. */
     private fun dismissActiveAction() {
         activeAction?.onDismiss()
         activeAction = null
+        //? if >=26.1 {
+        /*rebuildWidgets()
+        *///?} else {
         clearAndInit()
+        //?}
     }
 
     /**
@@ -94,7 +124,11 @@ class WidgetEditScreen : Screen(Text.literal(TITLE)) {
 
     /** Add a panel widget (button/text field) — public bridge to the protected Screen API. */
     fun <T> addActionWidget(widget: T): T where T : Element, T : Drawable, T : Selectable =
+        //? if >=26.1 {
+        /*addRenderableWidget(widget)
+        *///?} else {
         addDrawableChild(widget)
+        //?}
 
     /** Set initial keyboard focus to [element] — public bridge to the protected Screen API. */
     fun focusInitial(element: Element) = setInitialFocus(element)
@@ -105,12 +139,27 @@ class WidgetEditScreen : Screen(Text.literal(TITLE)) {
     private fun focusedEntry(): HudWidgetEntry? =
         focusedId?.let { id -> editableEntries().find { it.id == id } }
 
+    //? if >=26.1 {
+    /*override fun extractBackground(context: DrawContext, mouseX: Int, mouseY: Int, delta: Float) {
+        super.extractBackground(context, mouseX, mouseY, delta)
+        doRenderBackground(context)
+    }
+    *///?} else {
     override fun renderBackground(context: DrawContext, mouseX: Int, mouseY: Int, delta: Float) {
         super.renderBackground(context, mouseX, mouseY, delta)
+        doRenderBackground(context)
+    }
+    //?}
+
+    private fun doRenderBackground(context: DrawContext) {
         UiDraw.fillRect(context, 0, 0, width, height, UiTheme.Colors.BACKDROP)
 
         // Live widgets animate in edit mode (paused = false), like the rest of the HUD.
+        //? if >=26.1 {
+        /*val renderCtx = RenderContext(context, Util.getMillis(), paused = false)
+        *///?} else {
         val renderCtx = RenderContext(context, Util.getMeasuringTimeMs(), paused = false)
+        //?}
         var focusedRect: com.dyetracker.ui.core.Rect? = null
         for (entry in editableEntries()) {
             val rect = HudWidgetHost.boundsOf(entry, width, height) ?: continue
@@ -126,7 +175,11 @@ class WidgetEditScreen : Screen(Text.literal(TITLE)) {
             UiDraw.strokeRect(context, rect.x - 1, rect.y - 1, rect.width + 2, rect.height + 2, UiTheme.Colors.FOCUS_BORDER)
             UiDraw.drawText(
                 context,
+                //? if >=26.1 {
+                /*font,
+                *///?} else {
                 textRenderer,
+                //?}
                 "[$focusedId]",
                 rect.x + LABEL_MARGIN_PX,
                 rect.y + LABEL_MARGIN_PX,
@@ -137,11 +190,26 @@ class WidgetEditScreen : Screen(Text.literal(TITLE)) {
         activeAction?.renderBackground(this, context)
     }
 
+    //? if >=26.1 {
+    /*override fun extractRenderState(context: DrawContext, mouseX: Int, mouseY: Int, delta: Float) {
+        super.extractRenderState(context, mouseX, mouseY, delta)
+        doRender(context)
+    }
+    *///?} else {
     override fun render(context: DrawContext, mouseX: Int, mouseY: Int, delta: Float) {
         super.render(context, mouseX, mouseY, delta)
+        doRender(context)
+    }
+    //?}
+
+    private fun doRender(context: DrawContext) {
         UiDraw.drawText(
             context,
+            //? if >=26.1 {
+            /*font,
+            *///?} else {
             textRenderer,
+            //?}
             INSTRUCTION_BANNER,
             0,
             BANNER_TOP_PX,
@@ -218,7 +286,11 @@ class WidgetEditScreen : Screen(Text.literal(TITLE)) {
                 dismissActiveAction()
                 return true
             }
+            //? if >=26.1 {
+            /*onClose()
+            *///?} else {
             close()
+            //?}
             return true
         }
 
@@ -250,15 +322,27 @@ class WidgetEditScreen : Screen(Text.literal(TITLE)) {
         return super.keyPressed(input)
     }
 
+    //? if >=26.1 {
+    /*override fun isPauseScreen(): Boolean = false
+    *///?} else {
     override fun shouldPause(): Boolean = false
+    //?}
 
+    //? if >=26.1 {
+    /*override fun onClose() {
+    *///?} else {
     override fun close() {
+    //?}
         // Dismiss any active action so its worker thread does not outlive the screen, then
         // flush buffered drag/scale changes.
         activeAction?.onDismiss()
         activeAction = null
         flushDirty()
+        //? if >=26.2 {
+        /*MinecraftClient.getInstance()?.gui?.setScreen(null)
+        *///?} else {
         MinecraftClient.getInstance()?.setScreen(null)
+        //?}
     }
 
     private fun flushDirty() {
@@ -270,7 +354,11 @@ class WidgetEditScreen : Screen(Text.literal(TITLE)) {
 
     /** Poll GLFW directly because `Screen.hasShiftDown()` is no longer present in 1.21.10. */
     private fun isShiftHeld(): Boolean {
+        //? if >=26.1 {
+        /*val handle = MinecraftClient.getInstance().window.handle()
+        *///?} else {
         val handle = MinecraftClient.getInstance().window.handle
+        //?}
         return GLFW.glfwGetKey(handle, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS ||
             GLFW.glfwGetKey(handle, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS
     }

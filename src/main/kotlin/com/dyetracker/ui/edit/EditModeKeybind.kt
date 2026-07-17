@@ -2,11 +2,19 @@ package com.dyetracker.ui.edit
 
 import com.dyetracker.DyeTrackerMod
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
+//? if >=26.1 {
+/*import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper as KeyBindingHelper
+import net.minecraft.client.Minecraft as MinecraftClient
+import net.minecraft.client.KeyMapping as KeyBinding
+import com.mojang.blaze3d.platform.InputConstants as InputUtil
+import net.minecraft.resources.Identifier
+*///?} else {
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.option.KeyBinding
 import net.minecraft.client.util.InputUtil
 import net.minecraft.util.Identifier
+//?}
 import org.lwjgl.glfw.GLFW
 
 /**
@@ -29,19 +37,31 @@ object EditModeKeybind {
 
     /** Register the keybind + the tick listener that opens edit mode on a press. */
     fun register() {
+        //? if >=26.1 {
+        /*val category = KeyBinding.Category.register(Identifier.fromNamespaceAndPath(DyeTrackerMod.MOD_ID, CATEGORY_PATH))
+        *///?} else {
         val category = KeyBinding.Category.create(Identifier.of(DyeTrackerMod.MOD_ID, CATEGORY_PATH))
+        //?}
         editKey = KeyBinding(
             TRANSLATION_KEY,
             InputUtil.Type.KEYSYM,
             DEFAULT_KEY,
             category,
         )
+        //? if >=26.1 {
+        /*KeyBindingHelper.registerKeyMapping(editKey)
+        *///?} else {
         KeyBindingHelper.registerKeyBinding(editKey)
+        //?}
 
         // Drain the press-counter every tick so a single press only opens the screen once
         // even if multiple presses landed within one tick.
         ClientTickEvents.END_CLIENT_TICK.register { client ->
+            //? if >=26.1 {
+            /*while (editKey.consumeClick()) {
+            *///?} else {
             while (editKey.wasPressed()) {
+            //?}
                 openEditScreen(client)
             }
         }
@@ -50,7 +70,15 @@ object EditModeKeybind {
 
     /** Open edit mode if no other screen is active. Safe to call from any thread. */
     fun openEditScreen(client: MinecraftClient) {
+        //? if >=26.2 {
+        /*if (client.gui.screen() != null) return
+        client.gui.setScreen(WidgetEditScreen())
+        *///?} elif >=26.1 {
+        /*if (client.screen != null) return
+        client.setScreen(WidgetEditScreen())
+        *///?} else {
         if (client.currentScreen != null) return
         client.setScreen(WidgetEditScreen())
+        //?}
     }
 }

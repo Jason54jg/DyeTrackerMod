@@ -11,10 +11,17 @@ import com.dyetracker.ui.core.Widget
 import com.dyetracker.ui.texture.ImageTextureManager
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements
+//? if >=26.1 {
+/*import net.minecraft.client.Minecraft as MinecraftClient
+import net.minecraft.client.gui.GuiGraphicsExtractor as DrawContext
+import net.minecraft.client.DeltaTracker as RenderTickCounter
+import net.minecraft.resources.Identifier
+*///?} else {
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.render.RenderTickCounter
 import net.minecraft.util.Identifier
+//?}
 import net.minecraft.util.Util
 import kotlin.math.roundToInt
 
@@ -43,14 +50,22 @@ object HudWidgetHost {
         ImageTextureManager.addReleaseListener(::clearFirstRenderMark)
         HudElementRegistry.attachElementBefore(
             VanillaHudElements.CHAT,
+            //? if >=26.1 {
+            /*Identifier.fromNamespaceAndPath(DyeTrackerMod.MOD_ID, HUD_ELEMENT_ID),
+            *///?} else {
             Identifier.of(DyeTrackerMod.MOD_ID, HUD_ELEMENT_ID),
+            //?}
         ) { context, tickCounter -> render(context, tickCounter) }
         DyeTrackerMod.info("HUD widget host attached before vanilla chat")
     }
 
     private fun render(context: DrawContext, @Suppress("UNUSED_PARAMETER") tickCounter: RenderTickCounter) {
         val client = MinecraftClient.getInstance() ?: return
+        //? if >=26.1 {
+        /*val now = Util.getMillis()
+        *///?} else {
         val now = Util.getMeasuringTimeMs()
+        //?}
         val paused = client.isPaused
         // Advance the shared animation clock BEFORE the F1 check so animations stay in phase
         // even while the HUD is hidden; freeze it while paused.
@@ -62,14 +77,25 @@ object HudWidgetHost {
             if (!paused && delta > 0) runningTimeMs += delta
         }
 
+        //? if >=26.2 {
+        /*if (client.gui.hud.isHidden) return
+        *///?} elif >=26.1 {
+        /*if (client.options.hideGui) return
+        *///?} else {
         if (client.options.hudHidden) return
+        //?}
 
         val entries = HudWidgetRegistry.entries()
         if (entries.isEmpty()) return
 
         val window = client.window ?: return
+        //? if >=26.1 {
+        /*val screenW = window.guiScaledWidth
+        val screenH = window.guiScaledHeight
+        *///?} else {
         val screenW = window.scaledWidth
         val screenH = window.scaledHeight
+        //?}
         val renderCtx = RenderContext(context, runningTimeMs, paused)
 
         // Bounce mode (PBI 38) replaces each visible widget's static position with a drifting one from
@@ -188,7 +214,11 @@ object HudWidgetHost {
             widget.draw(ctx, x, y)
             return
         }
+        //? if >=26.1 {
+        /*val matrices = ctx.drawContext.pose()
+        *///?} else {
         val matrices = ctx.drawContext.matrices
+        //?}
         matrices.pushMatrix()
         matrices.translate(x.toFloat(), y.toFloat())
         matrices.scale(scale, scale)

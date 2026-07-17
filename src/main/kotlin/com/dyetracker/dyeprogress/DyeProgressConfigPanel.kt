@@ -5,10 +5,17 @@ import com.dyetracker.ui.core.UiDraw
 import com.dyetracker.ui.edit.WidgetConfigPanel
 import com.dyetracker.ui.edit.WidgetEditScreen
 import com.dyetracker.ui.theme.UiTheme
+//? if >=26.1 {
+/*import net.minecraft.client.gui.GuiGraphicsExtractor as DrawContext
+import net.minecraft.client.gui.components.Button as ButtonWidget
+import net.minecraft.client.gui.components.Checkbox as CheckboxWidget
+import net.minecraft.network.chat.Component as Text
+*///?} else {
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.gui.widget.ButtonWidget
 import net.minecraft.client.gui.widget.CheckboxWidget
 import net.minecraft.text.Text
+//?}
 
 /** A toggleable piece of the single-dye progress widget, with its checkbox label. */
 enum class DyeProgressPiece(val label: String) {
@@ -74,12 +81,21 @@ object DyeProgressConfigPanel : WidgetConfigPanel {
             var first: CheckboxWidget? = null
             DyeProgressPiece.entries.forEachIndexed { i, piece ->
                 val y = PANEL_TOP_PX + LIST_TOP_DY + i * CHECKBOX_ROW_STRIDE_PX
+                //? if >=26.1 {
+                /*val checkbox = CheckboxWidget.builder(Text.literal(piece.label), screen.font)
+                    .pos(contentLeft, y)
+                    .selected(pieceValue(cfg, piece))
+                    .onValueChange { _, checked -> persist(piece, checked) }
+                    .maxWidth(contentWidth)
+                    .build()
+                *///?} else {
                 val checkbox = CheckboxWidget.builder(Text.literal(piece.label), screen.textRenderer)
                     .pos(contentLeft, y)
                     .checked(pieceValue(cfg, piece))
                     .callback { _, checked -> persist(piece, checked) }
                     .maxWidth(contentWidth)
                     .build()
+                //?}
                 screen.addActionWidget(checkbox)
                 if (first == null) first = checkbox
             }
@@ -89,7 +105,11 @@ object DyeProgressConfigPanel : WidgetConfigPanel {
         val closeX = panelX + (PANEL_WIDTH_PX - CLOSE_BUTTON_WIDTH_PX) / 2
         screen.addActionWidget(
             ButtonWidget.builder(Text.literal("Close")) { screen.finishActiveAction(null) }
+                //? if >=26.1 {
+                /*.bounds(closeX, PANEL_TOP_PX + buttonsDy(), CLOSE_BUTTON_WIDTH_PX, CONTROL_HEIGHT_PX)
+                *///?} else {
                 .dimensions(closeX, PANEL_TOP_PX + buttonsDy(), CLOSE_BUTTON_WIDTH_PX, CONTROL_HEIGHT_PX)
+                //?}
                 .build(),
         )
     }
@@ -116,7 +136,11 @@ object DyeProgressConfigPanel : WidgetConfigPanel {
         val panelX = (screen.width - PANEL_WIDTH_PX) / 2
         UiDraw.drawText(
             context,
+            //? if >=26.1 {
+            /*screen.font,
+            *///?} else {
             screen.textRenderer,
+            //?}
             headerText ?: HEADER_FALLBACK,
             panelX + PANEL_PADDING_PX,
             PANEL_TOP_PX + HEADER_DY,

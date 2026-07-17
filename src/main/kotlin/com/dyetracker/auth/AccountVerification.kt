@@ -4,7 +4,11 @@ import com.dyetracker.DyeTrackerMod
 import com.dyetracker.api.ApiClient
 import com.dyetracker.config.ConfigManager
 import com.dyetracker.dyeprogress.DyeProgressStore
+//? if >=26.1 {
+/*import net.minecraft.client.Minecraft as MinecraftClient
+*///?} else {
 import net.minecraft.client.MinecraftClient
+//?}
 import java.net.URI
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
@@ -41,9 +45,15 @@ object AccountVerification {
      */
     fun verifyAccount(linkCode: String): CompletableFuture<VerificationResult> {
         // Capture session info on main thread (must be done before async to avoid classloader issues)
+        //? if >=26.1 {
+        /*val session = MinecraftClient.getInstance().user
+        val username = session.name
+        val uuid = session.profileId
+        *///?} else {
         val session = MinecraftClient.getInstance().session
         val username = session.username
         val uuid = session.uuidOrNull
+        //?}
         val accessToken = session.accessToken
 
         return CompletableFuture.supplyAsync({

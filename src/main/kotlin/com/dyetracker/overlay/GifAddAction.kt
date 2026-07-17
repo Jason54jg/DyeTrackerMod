@@ -11,11 +11,19 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+//? if >=26.1 {
+/*import net.minecraft.client.Minecraft as MinecraftClient
+import net.minecraft.client.gui.GuiGraphicsExtractor as DrawContext
+import net.minecraft.client.gui.components.Button as ButtonWidget
+import net.minecraft.client.gui.components.EditBox as TextFieldWidget
+import net.minecraft.network.chat.Component as Text
+*///?} else {
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.gui.widget.ButtonWidget
 import net.minecraft.client.gui.widget.TextFieldWidget
 import net.minecraft.text.Text
+//?}
 import org.lwjgl.glfw.GLFW
 
 /**
@@ -47,7 +55,11 @@ object GifAddAction : EditScreenAction {
         val panelY = PANEL_TOP_PX
 
         val field = TextFieldWidget(
+            //? if >=26.1 {
+            /*screen.font,
+            *///?} else {
             screen.textRenderer,
+            //?}
             panelX + PANEL_PADDING_PX,
             panelY + PANEL_PADDING_PX,
             PANEL_WIDTH_PX - 2 * PANEL_PADDING_PX,
@@ -55,20 +67,33 @@ object GifAddAction : EditScreenAction {
             Text.literal("URL"),
         )
         field.setMaxLength(URL_MAX_LENGTH)
+        //? if >=26.1 {
+        /*field.setValue("")
+        field.setHint(Text.literal("Paste image URL (https://…)"))
+        *///?} else {
         field.setText("")
         field.setPlaceholder(Text.literal("Paste image URL (https://…)"))
+        //?}
         urlField = screen.addActionWidget(field)
         screen.focusInitial(field)
 
         val buttonsY = panelY + PANEL_PADDING_PX + FIELD_HEIGHT_PX + INNER_GAP_PX
         screen.addActionWidget(
             ButtonWidget.builder(Text.literal("Add")) { submit(screen) }
+                //? if >=26.1 {
+                /*.bounds(panelX + PANEL_PADDING_PX, buttonsY, INNER_BUTTON_WIDTH, CONTROL_HEIGHT_PX)
+                *///?} else {
                 .dimensions(panelX + PANEL_PADDING_PX, buttonsY, INNER_BUTTON_WIDTH, CONTROL_HEIGHT_PX)
+                //?}
                 .build(),
         )
         screen.addActionWidget(
             ButtonWidget.builder(Text.literal("Cancel")) { screen.finishActiveAction(null) }
+                //? if >=26.1 {
+                /*.bounds(
+                *///?} else {
                 .dimensions(
+                //?}
                     panelX + PANEL_WIDTH_PX - PANEL_PADDING_PX - INNER_BUTTON_WIDTH,
                     buttonsY,
                     INNER_BUTTON_WIDTH,
@@ -116,7 +141,11 @@ object GifAddAction : EditScreenAction {
         val color = if (statusIsError) UiTheme.Colors.STATUS_ERROR else UiTheme.Colors.STATUS_OK
         UiDraw.drawText(
             context,
+            //? if >=26.1 {
+            /*screen.font,
+            *///?} else {
             screen.textRenderer,
+            //?}
             message,
             panelX + PANEL_PADDING_PX,
             PANEL_TOP_PX + PANEL_HEIGHT_PX - PANEL_PADDING_PX - STATUS_TEXT_HEIGHT_PX,
@@ -127,7 +156,11 @@ object GifAddAction : EditScreenAction {
     /** Kick off the add pipeline for the current text field value. */
     private fun submit(screen: WidgetEditScreen) {
         if (job?.isActive == true) return // already submitting
+        //? if >=26.1 {
+        /*val raw = urlField?.value.orEmpty()
+        *///?} else {
         val raw = urlField?.text.orEmpty()
+        //?}
         val myEpoch = ++epoch
         postStatus(myEpoch, "Downloading…", isError = false)
         job = scope.launch {

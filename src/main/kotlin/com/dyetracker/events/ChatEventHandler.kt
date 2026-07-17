@@ -3,7 +3,11 @@ package com.dyetracker.events
 import com.dyetracker.DyeTrackerMod
 import com.dyetracker.data.RngDataStore
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
+//? if >=26.1 {
+/*import net.minecraft.network.chat.Component as Text
+*///?} else {
 import net.minecraft.text.Text
+//?}
 
 /**
  * Handles chat messages to capture RNG-relevant events (Archfiend Dice rolls).

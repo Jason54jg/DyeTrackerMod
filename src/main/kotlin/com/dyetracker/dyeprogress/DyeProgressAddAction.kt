@@ -11,11 +11,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+//? if >=26.1 {
+/*import net.minecraft.client.Minecraft as MinecraftClient
+import net.minecraft.client.gui.GuiGraphicsExtractor as DrawContext
+import net.minecraft.client.gui.components.Button as ButtonWidget
+import net.minecraft.client.gui.components.EditBox as TextFieldWidget
+import net.minecraft.network.chat.Component as Text
+*///?} else {
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.gui.widget.ButtonWidget
 import net.minecraft.client.gui.widget.TextFieldWidget
 import net.minecraft.text.Text
+//?}
 import org.lwjgl.glfw.GLFW
 
 /**
@@ -56,15 +64,24 @@ object DyeProgressAddAction : EditScreenAction {
         val contentWidth = PANEL_WIDTH_PX - 2 * PANEL_PADDING_PX
 
         val search = TextFieldWidget(
+            //? if >=26.1 {
+            /*screen.font,
+            *///?} else {
             screen.textRenderer,
+            //?}
             contentLeft,
             PANEL_TOP_PX + SEARCH_DY,
             contentWidth,
             FIELD_HEIGHT_PX,
             Text.literal("Search dyes"),
         )
+        //? if >=26.1 {
+        /*search.setHint(Text.literal("Search dyes…"))
+        search.setResponder { query -> refreshMatches(query) }
+        *///?} else {
         search.setPlaceholder(Text.literal("Search dyes…"))
         search.setChangedListener { query -> refreshMatches(query) }
+        //?}
         searchField = screen.addActionWidget(search)
         screen.focusInitial(search)
 
@@ -72,13 +89,21 @@ object DyeProgressAddAction : EditScreenAction {
             val rowY = PANEL_TOP_PX + LIST_TOP_DY + i * ROW_STRIDE_PX
             screen.addActionWidget(
                 ButtonWidget.builder(Text.literal(" ")) { selectRow(i) }
+                    //? if >=26.1 {
+                    /*.bounds(contentLeft, rowY, contentWidth, ROW_HEIGHT_PX)
+                    *///?} else {
                     .dimensions(contentLeft, rowY, contentWidth, ROW_HEIGHT_PX)
+                    //?}
                     .build(),
             )
         }
 
         val profile = TextFieldWidget(
+            //? if >=26.1 {
+            /*screen.font,
+            *///?} else {
             screen.textRenderer,
+            //?}
             contentLeft,
             PANEL_TOP_PX + PROFILE_DY,
             contentWidth,
@@ -86,19 +111,32 @@ object DyeProgressAddAction : EditScreenAction {
             Text.literal("Profile"),
         )
         profile.setMaxLength(PROFILE_MAX_LENGTH)
+        //? if >=26.1 {
+        /*profile.setHint(Text.literal("Profile name (e.g. Mango)"))
+        profile.setValue(lastUsedProfileName())
+        *///?} else {
         profile.setPlaceholder(Text.literal("Profile name (e.g. Mango)"))
         profile.setText(lastUsedProfileName())
+        //?}
         profileField = screen.addActionWidget(profile)
 
         val buttonsY = PANEL_TOP_PX + BUTTONS_DY
         screen.addActionWidget(
             ButtonWidget.builder(Text.literal("Add")) { submit(screen) }
+                //? if >=26.1 {
+                /*.bounds(contentLeft, buttonsY, INNER_BUTTON_WIDTH, CONTROL_HEIGHT_PX)
+                *///?} else {
                 .dimensions(contentLeft, buttonsY, INNER_BUTTON_WIDTH, CONTROL_HEIGHT_PX)
+                //?}
                 .build(),
         )
         screen.addActionWidget(
             ButtonWidget.builder(Text.literal("Cancel")) { screen.finishActiveAction(null) }
+                //? if >=26.1 {
+                /*.bounds(
+                *///?} else {
                 .dimensions(
+                //?}
                     panelX + PANEL_WIDTH_PX - PANEL_PADDING_PX - INNER_BUTTON_WIDTH,
                     buttonsY,
                     INNER_BUTTON_WIDTH,
@@ -152,12 +190,20 @@ object DyeProgressAddAction : EditScreenAction {
         } else {
             "Add dye  ·  $totalMatches match(es)"
         }
+        //? if >=26.1 {
+        /*UiDraw.drawText(context, screen.font, countText, left, PANEL_TOP_PX + HEADER_DY, UiTheme.Colors.TEXT_SECONDARY)
+        *///?} else {
         UiDraw.drawText(context, screen.textRenderer, countText, left, PANEL_TOP_PX + HEADER_DY, UiTheme.Colors.TEXT_SECONDARY)
+        //?}
 
         // Status / hint line.
         val message = status ?: DEFAULT_HINT
         val color = if (status != null && statusIsError) UiTheme.Colors.STATUS_ERROR else UiTheme.Colors.STATUS_OK
+        //? if >=26.1 {
+        /*UiDraw.drawText(context, screen.font, message, left, PANEL_TOP_PX + STATUS_DY, color)
+        *///?} else {
         UiDraw.drawText(context, screen.textRenderer, message, left, PANEL_TOP_PX + STATUS_DY, color)
+        //?}
     }
 
     /** Recompute the filtered dye list and repaint the fixed row-button pool. */
@@ -198,7 +244,11 @@ object DyeProgressAddAction : EditScreenAction {
     private fun submit(screen: WidgetEditScreen) {
         if (job?.isActive == true) return
         val dye = selected
+        //? if >=26.1 {
+        /*val profileName = profileField?.value?.trim().orEmpty()
+        *///?} else {
         val profileName = profileField?.text?.trim().orEmpty()
+        //?}
         val myEpoch = ++epoch
 
         if (!ConfigManager.config.isLinked()) {

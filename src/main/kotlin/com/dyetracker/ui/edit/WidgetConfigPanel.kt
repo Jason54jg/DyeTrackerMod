@@ -1,7 +1,11 @@
 package com.dyetracker.ui.edit
 
 import com.dyetracker.ui.hud.HudWidgetEntry
+//? if >=26.1 {
+/*import net.minecraft.client.gui.GuiGraphicsExtractor as DrawContext
+*///?} else {
 import net.minecraft.client.gui.DrawContext
+//?}
 
 /**
  * A per-widget configuration panel a feature contributes for its HUD entries. It mirrors

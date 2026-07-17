@@ -1,6 +1,10 @@
 package com.dyetracker.ui.edit
 
+//? if >=26.1 {
+/*import net.minecraft.client.gui.GuiGraphicsExtractor as DrawContext
+*///?} else {
 import net.minecraft.client.gui.DrawContext
+//?}
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**

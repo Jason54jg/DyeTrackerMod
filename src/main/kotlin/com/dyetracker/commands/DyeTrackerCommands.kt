@@ -21,13 +21,25 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+//? if >=26.1 {
+/*import net.fabricmc.fabric.api.client.command.v2.ClientCommands as ClientCommandManager
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
+import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
+import net.minecraft.client.Minecraft as MinecraftClient
+import net.minecraft.commands.CommandBuildContext as CommandRegistryAccess
+import net.minecraft.network.chat.Component as Text
+import net.minecraft.network.chat.MutableComponent as MutableText
+import net.minecraft.ChatFormatting as Formatting
+*///?} else {
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
 import net.minecraft.client.MinecraftClient
 import net.minecraft.command.CommandRegistryAccess
+import net.minecraft.text.MutableText
 import net.minecraft.text.Text
 import net.minecraft.util.Formatting
+//?}
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -35,6 +47,14 @@ import java.util.Date
  * Registers client-side commands for the DyeTracker mod.
  */
 object DyeTrackerCommands {
+
+    // Yarn's Text#formatted(Formatting...) was renamed to withStyle(ChatFormatting...) on the
+    // official mappings 26.x uses; this shim keeps every call site below unchanged.
+    //? if >=26.1 {
+    /*private fun MutableText.styled(vararg colors: Formatting): MutableText = withStyle(*colors)
+    *///?} else {
+    private fun MutableText.styled(vararg colors: Formatting): MutableText = formatted(*colors)
+    //?}
 
     private const val GIF_URL_DISPLAY_MAX = 60
     private const val GIF_URL_TRUNCATE_AT = 57
@@ -68,7 +88,7 @@ object DyeTrackerCommands {
                         .executes { context ->
                             context.source.sendFeedback(
                                 Text.literal("Usage: /dyetracker link <code>")
-                                    .formatted(Formatting.YELLOW)
+                                    .styled(Formatting.YELLOW)
                             )
                             1
                         }
@@ -123,7 +143,7 @@ object DyeTrackerCommands {
                                 .executes { context ->
                                     context.source.sendFeedback(
                                         Text.literal("Usage: /dyetracker gif add <url>")
-                                            .formatted(Formatting.YELLOW)
+                                            .styled(Formatting.YELLOW)
                                     )
                                     1
                                 }
@@ -148,7 +168,7 @@ object DyeTrackerCommands {
                                 .executes { context ->
                                     context.source.sendFeedback(
                                         Text.literal("Usage: /dyetracker gif remove <id>")
-                                            .formatted(Formatting.YELLOW)
+                                            .styled(Formatting.YELLOW)
                                     )
                                     1
                                 }
@@ -163,7 +183,7 @@ object DyeTrackerCommands {
                         .executes { context ->
                             context.source.sendFeedback(
                                 Text.literal("Usage: /dyetracker gif <add|list|remove|edit>")
-                                    .formatted(Formatting.YELLOW)
+                                    .styled(Formatting.YELLOW)
                             )
                             1
                         }
@@ -187,7 +207,7 @@ object DyeTrackerCommands {
                         .executes { context ->
                             context.source.sendFeedback(
                                 Text.literal("Usage: /dyetracker rotation <toggle|edit>")
-                                    .formatted(Formatting.YELLOW)
+                                    .styled(Formatting.YELLOW)
                             )
                             1
                         }
@@ -213,7 +233,7 @@ object DyeTrackerCommands {
                                 .executes { context ->
                                     context.source.sendFeedback(
                                         Text.literal("Usage: /dyetracker dye remove <id>")
-                                            .formatted(Formatting.YELLOW)
+                                            .styled(Formatting.YELLOW)
                                     )
                                     1
                                 }
@@ -258,7 +278,7 @@ object DyeTrackerCommands {
                                         .executes { context ->
                                             context.source.sendFeedback(
                                                 Text.literal("Usage: /dyetracker dye add <dyeId> <profile>")
-                                                    .formatted(Formatting.YELLOW)
+                                                    .styled(Formatting.YELLOW)
                                             )
                                             1
                                         }
@@ -266,7 +286,7 @@ object DyeTrackerCommands {
                                 .executes { context ->
                                     context.source.sendFeedback(
                                         Text.literal("Usage: /dyetracker dye add <dyeId> <profile>")
-                                            .formatted(Formatting.YELLOW)
+                                            .styled(Formatting.YELLOW)
                                     )
                                     1
                                 }
@@ -274,7 +294,7 @@ object DyeTrackerCommands {
                         .executes { context ->
                             context.source.sendFeedback(
                                 Text.literal("Usage: /dyetracker dye <list|remove|edit|toggle|add>")
-                                    .formatted(Formatting.YELLOW)
+                                    .styled(Formatting.YELLOW)
                             )
                             1
                         }
@@ -319,14 +339,14 @@ object DyeTrackerCommands {
         if (rawUrl.trim().isEmpty()) {
             source.sendFeedback(
                 Text.literal("Invalid URL.")
-                    .formatted(Formatting.RED)
+                    .styled(Formatting.RED)
             )
             return
         }
 
         source.sendFeedback(
             Text.literal("Downloading…")
-                .formatted(Formatting.YELLOW)
+                .styled(Formatting.YELLOW)
         )
 
         gifCommandScope.launch {
@@ -339,10 +359,10 @@ object DyeTrackerCommands {
                         Text.literal(
                             "Added overlay '${outcome.id}' (${outcome.decoded.frames.size} frames, " +
                                 "${outcome.decoded.totalDurationMs}ms loop)"
-                        ).formatted(Formatting.GREEN)
+                        ).styled(Formatting.GREEN)
                     )
                     is OverlayAddPipeline.Outcome.Failure -> source.sendFeedback(
-                        Text.literal(outcome.message).formatted(Formatting.RED)
+                        Text.literal(outcome.message).styled(Formatting.RED)
                     )
                 }
             }
@@ -354,7 +374,7 @@ object DyeTrackerCommands {
         if (gifs.isEmpty()) {
             source.sendFeedback(
                 Text.literal("No overlays configured. Add one with /dyetracker gif add <url>")
-                    .formatted(Formatting.YELLOW)
+                    .styled(Formatting.YELLOW)
             )
             return
         }
@@ -368,7 +388,7 @@ object DyeTrackerCommands {
             source.sendFeedback(
                 Text.literal(
                     "${gif.id}: $truncatedUrl @(${gif.x}, ${gif.y}) scale ${gif.scale} [$visibility]"
-                ).formatted(Formatting.GRAY)
+                ).styled(Formatting.GRAY)
             )
         }
     }
@@ -377,14 +397,14 @@ object DyeTrackerCommands {
         if (!ConfigManager.gifPlacements.remove(id)) {
             source.sendFeedback(
                 Text.literal("No overlay with id '$id'.")
-                    .formatted(Formatting.RED)
+                    .styled(Formatting.RED)
             )
             return
         }
         ImageTextureManager.release(id)
         source.sendFeedback(
             Text.literal("Removed overlay '$id'.")
-                .formatted(Formatting.GREEN)
+                .styled(Formatting.GREEN)
         )
     }
 
@@ -392,7 +412,11 @@ object DyeTrackerCommands {
     private fun handleGifEditCommand(source: FabricClientCommandSource) {
         // Brigadier client commands already execute on the render thread, so no marshal
         // needed. The screen IS the feedback; no chat output here.
+        //? if >=26.2 {
+        /*MinecraftClient.getInstance().gui.setScreen(WidgetEditScreen())
+        *///?} else {
         MinecraftClient.getInstance().setScreen(WidgetEditScreen())
+        //?}
     }
 
     private fun handleRotationToggleCommand(source: FabricClientCommandSource) {
@@ -402,7 +426,7 @@ object DyeTrackerCommands {
         RotationPlacementEditor.setVisible(RotationWidgetConfig.WIDGET_ID, newVisible)
         source.sendFeedback(
             Text.literal("Dye rotation widget ${if (newVisible) "shown" else "hidden"}.")
-                .formatted(if (newVisible) Formatting.GREEN else Formatting.YELLOW)
+                .styled(if (newVisible) Formatting.GREEN else Formatting.YELLOW)
         )
     }
 
@@ -410,7 +434,11 @@ object DyeTrackerCommands {
     private fun handleRotationEditCommand(source: FabricClientCommandSource) {
         // Opens the same shared edit screen as `gif edit`; the rotation widget appears there
         // because it registered a PlacementEditor. The screen is the feedback.
+        //? if >=26.2 {
+        /*MinecraftClient.getInstance().gui.setScreen(WidgetEditScreen())
+        *///?} else {
         MinecraftClient.getInstance().setScreen(WidgetEditScreen())
+        //?}
     }
 
     /**
@@ -424,7 +452,7 @@ object DyeTrackerCommands {
         ConfigManager.setBounceEnabled(newState)
         source.sendFeedback(
             Text.literal("Bounce mode: ${if (newState) "ON" else "OFF"}")
-                .formatted(if (newState) Formatting.GREEN else Formatting.YELLOW)
+                .styled(if (newState) Formatting.GREEN else Formatting.YELLOW)
         )
     }
 
@@ -433,7 +461,7 @@ object DyeTrackerCommands {
         if (widgets.isEmpty()) {
             source.sendFeedback(
                 Text.literal("No dye widgets configured. Add one in /dyetracker dye edit (+ Add dye) or /dyetracker dye add <dyeId> <profile>")
-                    .formatted(Formatting.YELLOW)
+                    .styled(Formatting.YELLOW)
             )
             return
         }
@@ -443,7 +471,7 @@ object DyeTrackerCommands {
                 Text.literal(
                     "${widget.id}: ${widget.dyeId} ${widget.profileName} " +
                         "@(${widget.x}, ${widget.y}) scale ${widget.scale} [$visibility]"
-                ).formatted(Formatting.GRAY)
+                ).styled(Formatting.GRAY)
             )
         }
     }
@@ -452,13 +480,13 @@ object DyeTrackerCommands {
         if (!ConfigManager.dyeProgressPlacements.remove(id)) {
             source.sendFeedback(
                 Text.literal("No dye widget with id '$id'.")
-                    .formatted(Formatting.RED)
+                    .styled(Formatting.RED)
             )
             return
         }
         source.sendFeedback(
             Text.literal("Removed dye widget '$id'.")
-                .formatted(Formatting.GREEN)
+                .styled(Formatting.GREEN)
         )
     }
 
@@ -466,7 +494,11 @@ object DyeTrackerCommands {
     private fun handleDyeEditCommand(source: FabricClientCommandSource) {
         // Opens the same shared edit screen as `gif edit`; dye widgets appear there because they
         // registered a PlacementEditor, and the "+ Add dye" panel is available. Screen = feedback.
+        //? if >=26.2 {
+        /*MinecraftClient.getInstance().gui.setScreen(WidgetEditScreen())
+        *///?} else {
         MinecraftClient.getInstance().setScreen(WidgetEditScreen())
+        //?}
     }
 
     /** Toggle one widget's visibility, or all of them when [id] is null. */
@@ -475,7 +507,7 @@ object DyeTrackerCommands {
         if (widgets.isEmpty()) {
             source.sendFeedback(
                 Text.literal("No dye widgets configured.")
-                    .formatted(Formatting.YELLOW)
+                    .styled(Formatting.YELLOW)
             )
             return
         }
@@ -485,7 +517,7 @@ object DyeTrackerCommands {
             }
             source.sendFeedback(
                 Text.literal("Toggled ${widgets.size} dye widget(s).")
-                    .formatted(Formatting.GREEN)
+                    .styled(Formatting.GREEN)
             )
             return
         }
@@ -493,7 +525,7 @@ object DyeTrackerCommands {
         if (widget == null) {
             source.sendFeedback(
                 Text.literal("No dye widget with id '$id'.")
-                    .formatted(Formatting.RED)
+                    .styled(Formatting.RED)
             )
             return
         }
@@ -501,7 +533,7 @@ object DyeTrackerCommands {
         DyeProgressPlacementEditor.setVisible(id, newVisible)
         source.sendFeedback(
             Text.literal("Dye widget '$id' ${if (newVisible) "shown" else "hidden"}.")
-                .formatted(if (newVisible) Formatting.GREEN else Formatting.YELLOW)
+                .styled(if (newVisible) Formatting.GREEN else Formatting.YELLOW)
         )
     }
 
@@ -509,20 +541,20 @@ object DyeTrackerCommands {
         if (!ConfigManager.config.isLinked()) {
             source.sendFeedback(
                 Text.literal("Account not linked. Use /dyetracker link <code> first.")
-                    .formatted(Formatting.RED)
+                    .styled(Formatting.RED)
             )
             return
         }
         if (!DyeSprites.has(dyeId)) {
             source.sendFeedback(
                 Text.literal("Unknown dye '$dyeId'. Use /dyetracker dye edit to pick from the list.")
-                    .formatted(Formatting.RED)
+                    .styled(Formatting.RED)
             )
             return
         }
         source.sendFeedback(
             Text.literal("Resolving profile…")
-                .formatted(Formatting.YELLOW)
+                .styled(Formatting.YELLOW)
         )
         val username = ConfigManager.config.linkedUsername
         dyeCommandScope.launch {
@@ -532,23 +564,23 @@ object DyeTrackerCommands {
                 when (result) {
                     is DyeProgressAdder.Result.Added -> source.sendFeedback(
                         Text.literal("Added dye widget '${result.id}' ($dyeId @ ${profile.trim()}).")
-                            .formatted(Formatting.GREEN)
+                            .styled(Formatting.GREEN)
                     )
                     DyeProgressAdder.Result.NotLinked -> source.sendFeedback(
-                        Text.literal("Account not linked.").formatted(Formatting.RED)
+                        Text.literal("Account not linked.").styled(Formatting.RED)
                     )
                     DyeProgressAdder.Result.InvalidDye -> source.sendFeedback(
-                        Text.literal("Unknown dye '$dyeId'.").formatted(Formatting.RED)
+                        Text.literal("Unknown dye '$dyeId'.").styled(Formatting.RED)
                     )
                     DyeProgressAdder.Result.EmptyProfile -> source.sendFeedback(
-                        Text.literal("Enter a profile name.").formatted(Formatting.RED)
+                        Text.literal("Enter a profile name.").styled(Formatting.RED)
                     )
                     is DyeProgressAdder.Result.UnknownProfile -> source.sendFeedback(
                         Text.literal("No profile '${result.typed}'. Available: ${result.available.joinToString()}")
-                            .formatted(Formatting.RED)
+                            .styled(Formatting.RED)
                     )
                     is DyeProgressAdder.Result.NetworkError -> source.sendFeedback(
-                        Text.literal("Couldn't load profiles: ${result.message}").formatted(Formatting.RED)
+                        Text.literal("Couldn't load profiles: ${result.message}").styled(Formatting.RED)
                     )
                 }
             }
@@ -565,7 +597,7 @@ object DyeTrackerCommands {
         if (code.length != 8 || !code.all { it.isLetterOrDigit() }) {
             source.sendFeedback(
                 Text.literal("Invalid code format. Please enter the 8-character code from the website.")
-                    .formatted(Formatting.RED)
+                    .styled(Formatting.RED)
             )
             return
         }
@@ -574,14 +606,14 @@ object DyeTrackerCommands {
         if (AccountVerification.isLinked()) {
             source.sendFeedback(
                 Text.literal("Account already linked as ")
-                    .formatted(Formatting.YELLOW)
+                    .styled(Formatting.YELLOW)
                     .append(
                         Text.literal(ConfigManager.config.linkedUsername)
-                            .formatted(Formatting.AQUA)
+                            .styled(Formatting.AQUA)
                     )
                     .append(
                         Text.literal(". Use /dyetracker unlink first.")
-                            .formatted(Formatting.YELLOW)
+                            .styled(Formatting.YELLOW)
                     )
             )
             return
@@ -589,7 +621,7 @@ object DyeTrackerCommands {
 
         source.sendFeedback(
             Text.literal("Verifying account...")
-                .formatted(Formatting.YELLOW)
+                .styled(Formatting.YELLOW)
         )
 
         // Run verification async
@@ -600,27 +632,27 @@ object DyeTrackerCommands {
                     if (result.success) {
                         source.sendFeedback(
                             Text.literal("\u2714 ")
-                                .formatted(Formatting.GREEN)
+                                .styled(Formatting.GREEN)
                                 .append(
                                     Text.literal(result.message)
-                                        .formatted(Formatting.GREEN)
+                                        .styled(Formatting.GREEN)
                                 )
                         )
                         source.sendFeedback(
                             Text.literal("Linked as: ")
-                                .formatted(Formatting.GRAY)
+                                .styled(Formatting.GRAY)
                                 .append(
                                     Text.literal(result.username ?: "")
-                                        .formatted(Formatting.AQUA, Formatting.BOLD)
+                                        .styled(Formatting.AQUA, Formatting.BOLD)
                                 )
                         )
                     } else {
                         source.sendFeedback(
                             Text.literal("\u2718 ")
-                                .formatted(Formatting.RED)
+                                .styled(Formatting.RED)
                                 .append(
                                     Text.literal(result.message)
-                                        .formatted(Formatting.RED)
+                                        .styled(Formatting.RED)
                                 )
                         )
                     }
@@ -632,40 +664,40 @@ object DyeTrackerCommands {
         if (AccountVerification.isLinked()) {
             source.sendFeedback(
                 Text.literal("Account Status: ")
-                    .formatted(Formatting.GRAY)
+                    .styled(Formatting.GRAY)
                     .append(
                         Text.literal("Linked")
-                            .formatted(Formatting.GREEN, Formatting.BOLD)
+                            .styled(Formatting.GREEN, Formatting.BOLD)
                     )
             )
             source.sendFeedback(
                 Text.literal("Username: ")
-                    .formatted(Formatting.GRAY)
+                    .styled(Formatting.GRAY)
                     .append(
                         Text.literal(ConfigManager.config.linkedUsername)
-                            .formatted(Formatting.AQUA)
+                            .styled(Formatting.AQUA)
                     )
             )
             source.sendFeedback(
                 Text.literal("UUID: ")
-                    .formatted(Formatting.GRAY)
+                    .styled(Formatting.GRAY)
                     .append(
                         Text.literal(ConfigManager.config.linkedUuid)
-                            .formatted(Formatting.DARK_GRAY)
+                            .styled(Formatting.DARK_GRAY)
                     )
             )
             // Show token status
             val hasToken = ConfigManager.config.authToken.isNotEmpty()
             source.sendFeedback(
                 Text.literal("Auth Token: ")
-                    .formatted(Formatting.GRAY)
+                    .styled(Formatting.GRAY)
                     .append(
                         if (hasToken) {
                             Text.literal("Valid")
-                                .formatted(Formatting.GREEN)
+                                .styled(Formatting.GREEN)
                         } else {
                             Text.literal("Missing")
-                                .formatted(Formatting.RED)
+                                .styled(Formatting.RED)
                         }
                     )
             )
@@ -682,15 +714,15 @@ object DyeTrackerCommands {
 
             source.sendFeedback(
                 Text.literal("Last Sync: ")
-                    .formatted(Formatting.GRAY)
+                    .styled(Formatting.GRAY)
                     .append(
                         Text.literal(lastSyncText)
-                            .formatted(if (lastSyncSuccess) Formatting.GREEN else Formatting.RED)
+                            .styled(if (lastSyncSuccess) Formatting.GREEN else Formatting.RED)
                     )
                     .append(
                         if (syncPending) {
                             Text.literal(" (sync pending)")
-                                .formatted(Formatting.YELLOW)
+                                .styled(Formatting.YELLOW)
                         } else {
                             Text.literal("")
                         }
@@ -699,15 +731,15 @@ object DyeTrackerCommands {
         } else {
             source.sendFeedback(
                 Text.literal("Account Status: ")
-                    .formatted(Formatting.GRAY)
+                    .styled(Formatting.GRAY)
                     .append(
                         Text.literal("Not Linked")
-                            .formatted(Formatting.RED)
+                            .styled(Formatting.RED)
                     )
             )
             source.sendFeedback(
                 Text.literal("Use /dyetracker link <code> to link your account.")
-                    .formatted(Formatting.YELLOW)
+                    .styled(Formatting.YELLOW)
             )
         }
     }
@@ -716,7 +748,7 @@ object DyeTrackerCommands {
         if (!AccountVerification.isLinked()) {
             source.sendFeedback(
                 Text.literal("Account not linked. Use /dyetracker link <code> first.")
-                    .formatted(Formatting.RED)
+                    .styled(Formatting.RED)
             )
             return
         }
@@ -725,14 +757,14 @@ object DyeTrackerCommands {
         if (!data.hasData()) {
             source.sendFeedback(
                 Text.literal("No RNG data to sync.")
-                    .formatted(Formatting.YELLOW)
+                    .styled(Formatting.YELLOW)
             )
             return
         }
 
         source.sendFeedback(
             Text.literal("Syncing RNG data...")
-                .formatted(Formatting.YELLOW)
+                .styled(Formatting.YELLOW)
         )
 
         SyncManager.syncNow(data)
@@ -741,19 +773,19 @@ object DyeTrackerCommands {
                     if (result.success) {
                         source.sendFeedback(
                             Text.literal("\u2714 ")
-                                .formatted(Formatting.GREEN)
+                                .styled(Formatting.GREEN)
                                 .append(
                                     Text.literal("RNG data synced successfully!")
-                                        .formatted(Formatting.GREEN)
+                                        .styled(Formatting.GREEN)
                                 )
                         )
                     } else {
                         source.sendFeedback(
                             Text.literal("\u2718 ")
-                                .formatted(Formatting.RED)
+                                .styled(Formatting.RED)
                                 .append(
                                     Text.literal("Sync failed: ${result.message}")
-                                        .formatted(Formatting.RED)
+                                        .styled(Formatting.RED)
                                 )
                         )
                     }
@@ -768,45 +800,45 @@ object DyeTrackerCommands {
             BounceController.setEnabled(ConfigManager.isBounceEnabled())
             source.sendFeedback(
                 Text.literal("\u2714 Configuration reloaded")
-                    .formatted(Formatting.GREEN)
+                    .styled(Formatting.GREEN)
             )
             source.sendFeedback(
                 Text.literal("API URL: ")
-                    .formatted(Formatting.GRAY)
+                    .styled(Formatting.GRAY)
                     .append(
                         Text.literal(ConfigManager.config.apiUrl)
-                            .formatted(Formatting.AQUA)
+                            .styled(Formatting.AQUA)
                     )
             )
             val hasToken = ConfigManager.config.authToken.isNotEmpty()
             source.sendFeedback(
                 Text.literal("Auth Token: ")
-                    .formatted(Formatting.GRAY)
+                    .styled(Formatting.GRAY)
                     .append(
                         if (hasToken) {
                             Text.literal("Present")
-                                .formatted(Formatting.GREEN)
+                                .styled(Formatting.GREEN)
                         } else {
                             Text.literal("Not set")
-                                .formatted(Formatting.YELLOW)
+                                .styled(Formatting.YELLOW)
                         }
                     )
             )
             source.sendFeedback(
                 Text.literal("Bounce mode: ")
-                    .formatted(Formatting.GRAY)
+                    .styled(Formatting.GRAY)
                     .append(
                         if (ConfigManager.isBounceEnabled()) {
-                            Text.literal("ON").formatted(Formatting.GREEN)
+                            Text.literal("ON").styled(Formatting.GREEN)
                         } else {
-                            Text.literal("OFF").formatted(Formatting.YELLOW)
+                            Text.literal("OFF").styled(Formatting.YELLOW)
                         }
                     )
             )
         } catch (e: Exception) {
             source.sendFeedback(
                 Text.literal("\u2718 Failed to reload config: ${e.message}")
-                    .formatted(Formatting.RED)
+                    .styled(Formatting.RED)
             )
             DyeTrackerMod.LOGGER.error("Failed to reload config", e)
         }
@@ -816,7 +848,7 @@ object DyeTrackerCommands {
         if (!AccountVerification.isLinked()) {
             source.sendFeedback(
                 Text.literal("No account is currently linked.")
-                    .formatted(Formatting.YELLOW)
+                    .styled(Formatting.YELLOW)
             )
             return
         }
@@ -826,14 +858,14 @@ object DyeTrackerCommands {
 
         source.sendFeedback(
             Text.literal("Account ")
-                .formatted(Formatting.GRAY)
+                .styled(Formatting.GRAY)
                 .append(
                     Text.literal(username)
-                        .formatted(Formatting.AQUA)
+                        .styled(Formatting.AQUA)
                 )
                 .append(
                     Text.literal(" has been unlinked.")
-                        .formatted(Formatting.GRAY)
+                        .styled(Formatting.GRAY)
                 )
         )
     }
@@ -844,25 +876,25 @@ object DyeTrackerCommands {
         if (!data.hasData()) {
             source.sendFeedback(
                 Text.literal("No RNG data captured yet.")
-                    .formatted(Formatting.YELLOW)
+                    .styled(Formatting.YELLOW)
             )
             source.sendFeedback(
                 Text.literal("Open RNG meter menus in-game to capture data.")
-                    .formatted(Formatting.GRAY)
+                    .styled(Formatting.GRAY)
             )
             return
         }
 
         source.sendFeedback(
             Text.literal("=== RNG Data ===")
-                .formatted(Formatting.GOLD, Formatting.BOLD)
+                .styled(Formatting.GOLD, Formatting.BOLD)
         )
 
         // Show dungeon meters
         if (data.dungeonMeters.isNotEmpty()) {
             source.sendFeedback(
                 Text.literal("Dungeon RNG Meters:")
-                    .formatted(Formatting.LIGHT_PURPLE)
+                    .styled(Formatting.LIGHT_PURPLE)
             )
             for ((floor, meter) in data.dungeonMeters) {
                 val itemInfo = if (meter.selectedItem != null) {
@@ -870,14 +902,14 @@ object DyeTrackerCommands {
                 } else ""
                 source.sendFeedback(
                     Text.literal("  ${floor.name}: ")
-                        .formatted(Formatting.GRAY)
+                        .styled(Formatting.GRAY)
                         .append(
                             Text.literal("${formatXp(meter.storedXp)} XP")
-                                .formatted(Formatting.WHITE)
+                                .styled(Formatting.WHITE)
                         )
                         .append(
                             Text.literal(itemInfo)
-                                .formatted(Formatting.DARK_GRAY)
+                                .styled(Formatting.DARK_GRAY)
                         )
                 )
             }
@@ -890,14 +922,14 @@ object DyeTrackerCommands {
             } else ""
             source.sendFeedback(
                 Text.literal("Nucleus RNG: ")
-                    .formatted(Formatting.GREEN)
+                    .styled(Formatting.GREEN)
                     .append(
                         Text.literal("${formatXp(meter.storedXp)} XP")
-                            .formatted(Formatting.WHITE)
+                            .styled(Formatting.WHITE)
                     )
                     .append(
                         Text.literal(itemInfo)
-                            .formatted(Formatting.DARK_GRAY)
+                            .styled(Formatting.DARK_GRAY)
                     )
             )
         }
@@ -909,14 +941,14 @@ object DyeTrackerCommands {
             } else ""
             source.sendFeedback(
                 Text.literal("Experimentation RNG: ")
-                    .formatted(Formatting.BLUE)
+                    .styled(Formatting.BLUE)
                     .append(
                         Text.literal("${formatXp(meter.storedXp)} XP")
-                            .formatted(Formatting.WHITE)
+                            .styled(Formatting.WHITE)
                     )
                     .append(
                         Text.literal(itemInfo)
-                            .formatted(Formatting.DARK_GRAY)
+                            .styled(Formatting.DARK_GRAY)
                     )
             )
         }
@@ -925,10 +957,10 @@ object DyeTrackerCommands {
         data.mineshaftPity?.let { pity ->
             source.sendFeedback(
                 Text.literal("Mineshaft Pity: ")
-                    .formatted(Formatting.DARK_AQUA)
+                    .styled(Formatting.DARK_AQUA)
                     .append(
                         Text.literal("${pity.pityValue}/2,000")
-                            .formatted(Formatting.WHITE)
+                            .styled(Formatting.WHITE)
                     )
             )
         }
@@ -937,30 +969,30 @@ object DyeTrackerCommands {
         data.archfiendDye?.let { dye ->
             source.sendFeedback(
                 Text.literal("Archfiend Dye:")
-                    .formatted(Formatting.DARK_RED)
+                    .styled(Formatting.DARK_RED)
             )
             source.sendFeedback(
                 Text.literal("  High Class Dice: ")
-                    .formatted(Formatting.GRAY)
+                    .styled(Formatting.GRAY)
                     .append(
                         Text.literal("${dye.highClassDiceRolls} rolls")
-                            .formatted(Formatting.WHITE)
+                            .styled(Formatting.WHITE)
                     )
                     .append(
                         Text.literal(" (1/666)")
-                            .formatted(Formatting.DARK_GRAY)
+                            .styled(Formatting.DARK_GRAY)
                     )
             )
             source.sendFeedback(
                 Text.literal("  Archfiend Dice: ")
-                    .formatted(Formatting.GRAY)
+                    .styled(Formatting.GRAY)
                     .append(
                         Text.literal("${dye.archfiendDiceRolls} rolls")
-                            .formatted(Formatting.WHITE)
+                            .styled(Formatting.WHITE)
                     )
                     .append(
                         Text.literal(" (1/6,600)")
-                            .formatted(Formatting.DARK_GRAY)
+                            .styled(Formatting.DARK_GRAY)
                     )
             )
         }
@@ -969,14 +1001,14 @@ object DyeTrackerCommands {
         data.nyanzaDye?.let { dye ->
             source.sendFeedback(
                 Text.literal("Nyanza Dye: ")
-                    .formatted(Formatting.GREEN)
+                    .styled(Formatting.GREEN)
                     .append(
                         Text.literal("${formatXp(dye.commissionsCompleted.toLong())} commissions")
-                            .formatted(Formatting.WHITE)
+                            .styled(Formatting.WHITE)
                     )
                     .append(
                         Text.literal(" (1/250,000)")
-                            .formatted(Formatting.DARK_GRAY)
+                            .styled(Formatting.DARK_GRAY)
                     )
             )
         }
@@ -985,7 +1017,7 @@ object DyeTrackerCommands {
         data.copperDye?.let { dye ->
             source.sendFeedback(
                 Text.literal("Copper Dye:")
-                    .formatted(Formatting.GOLD)
+                    .styled(Formatting.GOLD)
             )
             // Display drop rates for each rarity tier
             val dropRates = mapOf(
@@ -999,14 +1031,14 @@ object DyeTrackerCommands {
                 val dropRate = dropRates[rarity.name] ?: "???"
                 source.sendFeedback(
                     Text.literal("  ${rarity.name}: ")
-                        .formatted(Formatting.GRAY)
+                        .styled(Formatting.GRAY)
                         .append(
                             Text.literal("$count seen")
-                                .formatted(Formatting.WHITE)
+                                .styled(Formatting.WHITE)
                         )
                         .append(
                             Text.literal(" ($dropRate)")
-                                .formatted(Formatting.DARK_GRAY)
+                                .styled(Formatting.DARK_GRAY)
                         )
                 )
             }
@@ -1023,86 +1055,86 @@ object DyeTrackerCommands {
     private fun showHelp(source: FabricClientCommandSource) {
         source.sendFeedback(
             Text.literal("DyeTracker Commands:")
-                .formatted(Formatting.GOLD, Formatting.BOLD)
+                .styled(Formatting.GOLD, Formatting.BOLD)
         )
         source.sendFeedback(
             Text.literal("  /dyetracker link <code>")
-                .formatted(Formatting.YELLOW)
+                .styled(Formatting.YELLOW)
                 .append(
                     Text.literal(" - Link your account")
-                        .formatted(Formatting.GRAY)
+                        .styled(Formatting.GRAY)
                 )
         )
         source.sendFeedback(
             Text.literal("  /dyetracker status")
-                .formatted(Formatting.YELLOW)
+                .styled(Formatting.YELLOW)
                 .append(
                     Text.literal(" - Show link status")
-                        .formatted(Formatting.GRAY)
+                        .styled(Formatting.GRAY)
                 )
         )
         source.sendFeedback(
             Text.literal("  /dyetracker unlink")
-                .formatted(Formatting.YELLOW)
+                .styled(Formatting.YELLOW)
                 .append(
                     Text.literal(" - Unlink your account")
-                        .formatted(Formatting.GRAY)
+                        .styled(Formatting.GRAY)
                 )
         )
         source.sendFeedback(
             Text.literal("  /dyetracker show")
-                .formatted(Formatting.YELLOW)
+                .styled(Formatting.YELLOW)
                 .append(
                     Text.literal(" - Show captured RNG data")
-                        .formatted(Formatting.GRAY)
+                        .styled(Formatting.GRAY)
                 )
         )
         source.sendFeedback(
             Text.literal("  /dyetracker sync")
-                .formatted(Formatting.YELLOW)
+                .styled(Formatting.YELLOW)
                 .append(
                     Text.literal(" - Force sync RNG data to backend")
-                        .formatted(Formatting.GRAY)
+                        .styled(Formatting.GRAY)
                 )
         )
         source.sendFeedback(
             Text.literal("  /dyetracker reload")
-                .formatted(Formatting.YELLOW)
+                .styled(Formatting.YELLOW)
                 .append(
                     Text.literal(" - Reload config (debug)")
-                        .formatted(Formatting.GRAY)
+                        .styled(Formatting.GRAY)
                 )
         )
         source.sendFeedback(
             Text.literal("  /dyetracker gif <add|list|remove|edit>")
-                .formatted(Formatting.YELLOW)
+                .styled(Formatting.YELLOW)
                 .append(
                     Text.literal(" - Manage HUD image/GIF overlays")
-                        .formatted(Formatting.GRAY)
+                        .styled(Formatting.GRAY)
                 )
         )
         source.sendFeedback(
             Text.literal("  /dyetracker rotation <toggle|edit>")
-                .formatted(Formatting.YELLOW)
+                .styled(Formatting.YELLOW)
                 .append(
                     Text.literal(" - Toggle/position the dye rotation widget")
-                        .formatted(Formatting.GRAY)
+                        .styled(Formatting.GRAY)
                 )
         )
         source.sendFeedback(
             Text.literal("  /dyetracker dye <list|remove|edit|toggle|add>")
-                .formatted(Formatting.YELLOW)
+                .styled(Formatting.YELLOW)
                 .append(
                     Text.literal(" - Manage single-dye progress widgets")
-                        .formatted(Formatting.GRAY)
+                        .styled(Formatting.GRAY)
                 )
         )
         source.sendFeedback(
             Text.literal("  /dyetracker bounce [on|off|toggle]")
-                .formatted(Formatting.YELLOW)
+                .styled(Formatting.YELLOW)
                 .append(
                     Text.literal(" - DVD-bounce your HUD widgets around the screen")
-                        .formatted(Formatting.GRAY)
+                        .styled(Formatting.GRAY)
                 )
         )
     }
