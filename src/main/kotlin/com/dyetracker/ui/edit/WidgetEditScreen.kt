@@ -53,7 +53,7 @@ import kotlin.math.pow
  * deltas are converted to fractional via the current screen size. Drag/scale use the transient
  * update path and flush once on release/close; visibility/delete persist immediately.
  */
-class WidgetEditScreen : Screen(Text.literal(TITLE)) {
+class WidgetEditScreen(private val parentScreen: Screen? = null) : Screen(Text.literal(TITLE)) {
 
     private var focusedId: String? = null
 
@@ -339,9 +339,9 @@ class WidgetEditScreen : Screen(Text.literal(TITLE)) {
         activeAction = null
         flushDirty()
         //? if >=26.2 {
-        /*MinecraftClient.getInstance()?.gui?.setScreen(null)
+        /*MinecraftClient.getInstance()?.gui?.setScreen(parentScreen)
         *///?} else {
-        MinecraftClient.getInstance()?.setScreen(null)
+        MinecraftClient.getInstance()?.setScreen(parentScreen)
         //?}
     }
 

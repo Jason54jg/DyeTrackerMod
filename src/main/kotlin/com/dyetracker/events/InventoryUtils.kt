@@ -232,11 +232,7 @@ object InventoryUtils {
      * Returns null if the item is not selected.
      */
     fun parseSelectedItem(itemStack: ItemStack): SelectedItemInfo? {
-        //? if >=26.1 {
-        /*val name = itemStack.hoverName?.string ?: return null
-        *///?} else {
         val name = itemStack.name?.string ?: return null
-        //?}
         val lore = getLore(itemStack)
 
         if (!isSelected(lore)) {
@@ -257,11 +253,7 @@ object InventoryUtils {
      * stably for all players, including those who have maxed every milestone tier.
      */
     fun parseCommissionMilestoneCount(itemStack: ItemStack): Int? {
-        //? if >=26.1 {
-        /*val name = stripFormatting(itemStack.hoverName?.string ?: return null)
-        *///?} else {
         val name = stripFormatting(itemStack.name?.string ?: return null)
-        //?}
         if (!name.contains(MILESTONE_I_REWARDS_ITEM)) return null
 
         val lore = getLore(itemStack)

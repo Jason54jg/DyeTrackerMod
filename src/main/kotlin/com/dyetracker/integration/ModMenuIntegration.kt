@@ -11,5 +11,5 @@ import com.terraformersmc.modmenu.api.ModMenuApi
  */
 class ModMenuIntegration : ModMenuApi {
     override fun getModConfigScreenFactory(): ConfigScreenFactory<*> =
-        ConfigScreenFactory { _ -> WidgetEditScreen() }
+        ConfigScreenFactory { parent -> WidgetEditScreen(parent) }
 }
