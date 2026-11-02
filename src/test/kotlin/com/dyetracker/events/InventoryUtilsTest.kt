@@ -1,5 +1,6 @@
 package com.dyetracker.events
 
+import com.dyetracker.data.PotionTier
 import com.dyetracker.data.VisitorEntry
 import com.dyetracker.data.VisitorRarity
 import com.dyetracker.data.aggregateVisitorsSeenByTier
@@ -180,6 +181,26 @@ class InventoryUtilsTest {
         assertEquals(7, perTier[VisitorRarity.SPECIAL])
         assertEquals(2, perTier[VisitorRarity.UNCOMMON])
         assertNull(perTier[VisitorRarity.MYTHIC])
+    }
+
+    @Test
+    fun `parsePotionTier reads the tier from a potion name (PBI 66)`() {
+        assertEquals(PotionTier.VII, InventoryUtils.parsePotionTier("Regeneration VII Potion"))
+        assertEquals(PotionTier.VIII, InventoryUtils.parsePotionTier("Speed VIII Potion"))
+        assertEquals(PotionTier.III, InventoryUtils.parsePotionTier("Fishing XP Boost III Potion"))
+        assertEquals(PotionTier.I, InventoryUtils.parsePotionTier("Speed I Potion"))
+    }
+
+    @Test
+    fun `parsePotionTier strips formatting before matching (PBI 66)`() {
+        assertEquals(PotionTier.VII, InventoryUtils.parsePotionTier("§5Regeneration VII Potion "))
+    }
+
+    @Test
+    fun `parsePotionTier returns null for names without a tier (PBI 66)`() {
+        assertNull(InventoryUtils.parsePotionTier("Awkward Potion"))
+        assertNull(InventoryUtils.parsePotionTier("Water Bottle"))
+        assertNull(InventoryUtils.parsePotionTier("Potion"))
     }
 
     @Test

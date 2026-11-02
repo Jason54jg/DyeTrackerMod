@@ -2,13 +2,14 @@ package com.dyetracker.api
 
 import com.dyetracker.data.ArchfiendDyeData
 import com.dyetracker.data.CopperDyeData
+import com.dyetracker.data.DarkPurpleDyeData
 import com.dyetracker.data.DroppedDye
-import com.dyetracker.data.DungeonFloor
+import com.dyetracker.data.FossilDyeData
+import com.dyetracker.data.HollyDyeData
+import com.dyetracker.data.MochaDyeData
 import com.dyetracker.data.NyanzaDyeData
-import com.dyetracker.data.DungeonRngMeter
-import com.dyetracker.data.ExperimentationRngMeter
+import com.dyetracker.data.TreasureDyeData
 import com.dyetracker.data.MineshaftPity
-import com.dyetracker.data.NucleusRngMeter
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -17,14 +18,17 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class SyncRngDataRequest(
-    // PBI 47: slayerMeters removed — the mod no longer captures or sends slayer RNG-meter data.
-    val dungeonMeters: Map<DungeonFloor, DungeonRngMeter> = emptyMap(),
-    val nucleusMeter: NucleusRngMeter? = null,
-    val experimentationMeter: ExperimentationRngMeter? = null,
+    // PBI 47 / PBI 63: slayerMeters and the dungeon / nucleus / experimentation meter fields removed —
+    // the mod no longer captures or sends RNG-meter data.
     val mineshaftPity: MineshaftPity? = null,
     val archfiendDye: ArchfiendDyeData? = null,
     val copperDye: CopperDyeData? = null,
     val nyanzaDye: NyanzaDyeData? = null,
+    val treasureDye: TreasureDyeData? = null,
+    val fossilDye: FossilDyeData? = null,
+    val darkPurpleDye: DarkPurpleDyeData? = null,
+    val hollyDye: HollyDyeData? = null,
+    val mochaDye: MochaDyeData? = null,
     val modTimestamp: Long
 )
 

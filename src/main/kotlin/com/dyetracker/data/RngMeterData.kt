@@ -4,46 +4,8 @@ import kotlinx.serialization.Serializable
 
 // PBI 47: SlayerType + SlayerRngMeter removed — slayer dyes are estimated from per-tier
 // boss kill counts on the backend, so the mod no longer models slayer RNG meters.
-
-/**
- * Dungeon floors that have RNG meters.
- */
-@Serializable
-enum class DungeonFloor {
-    M5,
-    M7
-}
-
-/**
- * RNG meter data for a dungeon floor.
- */
-@Serializable
-data class DungeonRngMeter(
-    val floor: DungeonFloor,
-    val storedXp: Long,
-    val selectedItem: String? = null,
-    val goalXp: Long? = null
-)
-
-/**
- * RNG meter data for Crystal Hollows Nucleus.
- */
-@Serializable
-data class NucleusRngMeter(
-    val storedXp: Long,
-    val selectedItem: String? = null,
-    val goalXp: Long? = null
-)
-
-/**
- * RNG meter data for Experimentation Table.
- */
-@Serializable
-data class ExperimentationRngMeter(
-    val storedXp: Long,
-    val selectedItem: String? = null,
-    val goalXp: Long? = null
-)
+// PBI 63: the dungeon (M5/M7), Crystal Nucleus and Experimentation Table RNG-meter models were
+// removed the same way — the mod no longer captures those RNG meters.
 
 /**
  * Mineshaft pity counter (0-2000).
@@ -142,17 +104,106 @@ data class NyanzaDyeData(
 )
 
 /**
+ * Treasure-quality tiers for fishing-treasure catches (PBI 58).
+ *
+ * Matches the in-game catch-quality chat line `<TIER> ... CATCH!` (`⛃ GOOD/GREAT/OUTSTANDING
+ * CATCH!`) parsed by the capture handler, and the per-tier count fields on [TreasureDyeData] /
+ * the backend `treasureDyeSchema`.
+ */
+enum class TreasureQuality {
+    GOOD,
+    GREAT,
+    OUTSTANDING
+}
+
+/**
+ * Treasure Dye tracking data (PBI 58).
+ *
+ * Per-tier counts of fishing treasures caught — Good / Great / Outstanding — captured from the
+ * in-game catch-quality chat line. Each catch is a discrete increment (unlike the Copper
+ * Logbook full-snapshot replace), because the Treasure Dye rolls per catch at a per-tier rate.
+ * The JSON keys (`goodCatches`/`greatCatches`/`outstandingCatches`) follow the property names,
+ * matching the backend `treasureDyeSchema` exactly (PBI 58 task 58-3).
+ */
+@Serializable
+data class TreasureDyeData(
+    val goodCatches: Int = 0,
+    val greatCatches: Int = 0,
+    val outstandingCatches: Int = 0
+)
+
+/**
+ * Fossil Dye tracking data (PBI 66).
+ *
+ * Count of Suspicious Scraps excavated, captured from the in-game `EXCAVATION COMPLETE` chat block.
+ * Each excavation is a discrete increment (like a Treasure catch), because the Fossil Dye rolls
+ * once per excavation. The JSON key (`excavations`) follows the property name, matching the
+ * backend contract.
+ */
+@Serializable
+data class FossilDyeData(
+    val excavations: Int = 0
+)
+
+/**
+ * Dark Purple Dye tracking data (PBI 66).
+ *
+ * Count of Dark Auctions attended, captured from the in-game `Transferring to Dark Auction...`
+ * chat line. Each auction attended is a discrete increment. The JSON key (`auctionsAttended`)
+ * follows the property name, matching the backend contract.
+ */
+@Serializable
+data class DarkPurpleDyeData(
+    val auctionsAttended: Int = 0
+)
+
+/**
+ * Holly Dye tracking data (PBI 66).
+ *
+ * Counts of gift reward chat lines (`<RARITY>! <reward> gift with <player>!`), one per gift given
+ * or opened. Keys are `"<RARITY>|<reward text>"`, kept raw: the chat line does not say the gift's
+ * color, so the backend normalises the keys and estimates the red share. The JSON key
+ * (`giftRewards`) follows the property name, matching the backend contract.
+ */
+@Serializable
+data class HollyDyeData(
+    val giftRewards: Map<String, Int> = emptyMap()
+)
+
+/**
+ * Potion tiers I-VIII, read from a brewed potion's name (`Regeneration VII Potion`) (PBI 66).
+ *
+ * Used as the key of [MochaDyeData.potionsByTier], so it serialises by enum name (`"VII"`).
+ */
+@Serializable
+enum class PotionTier { I, II, III, IV, V, VI, VII, VIII }
+
+/**
+ * Mocha Dye tracking data (PBI 66).
+ *
+ * Per-tier counts of potions taken out of the Brewing Stand after brewing. The Mocha Dye rolls
+ * once per brewed potion at a per-tier rate. Serialises like [CopperDyeData.visitorsSeen], with
+ * tier names as keys (`{"potionsByTier":{"VII":2}}`), matching the backend contract.
+ */
+@Serializable
+data class MochaDyeData(
+    val potionsByTier: Map<PotionTier, Int> = emptyMap()
+)
+
+/**
  * Composite data class holding all RNG data for a player.
  */
 @Serializable
 data class PlayerRngData(
-    val dungeonMeters: Map<DungeonFloor, DungeonRngMeter> = emptyMap(),
-    val nucleusMeter: NucleusRngMeter? = null,
-    val experimentationMeter: ExperimentationRngMeter? = null,
     val mineshaftPity: MineshaftPity? = null,
     val archfiendDye: ArchfiendDyeData? = null,
     val copperDye: CopperDyeData? = null,
     val nyanzaDye: NyanzaDyeData? = null,
+    val treasureDye: TreasureDyeData? = null,
+    val fossilDye: FossilDyeData? = null,
+    val darkPurpleDye: DarkPurpleDyeData? = null,
+    val hollyDye: HollyDyeData? = null,
+    val mochaDye: MochaDyeData? = null,
     val dyeCollection: DyeCollection? = null,
     // PBI 42: local-only persisted union of all visitors seen in the Logbook (never synced; the
     // per-tier copperDye snapshot is derived from it). Lets the per-tier total survive page-turns,
@@ -163,13 +214,15 @@ data class PlayerRngData(
      * Returns true if any RNG data has been captured.
      */
     fun hasData(): Boolean {
-        return dungeonMeters.isNotEmpty() ||
-            nucleusMeter != null ||
-            experimentationMeter != null ||
-            mineshaftPity != null ||
+        return mineshaftPity != null ||
             archfiendDye != null ||
             copperDye != null ||
             nyanzaDye != null ||
+            treasureDye != null ||
+            fossilDye != null ||
+            darkPurpleDye != null ||
+            hollyDye != null ||
+            mochaDye != null ||
             dyeCollection != null ||
             visitorLogbook != null
     }

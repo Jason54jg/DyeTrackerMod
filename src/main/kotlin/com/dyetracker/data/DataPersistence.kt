@@ -67,7 +67,7 @@ object DataPersistence {
                 DyeTrackerMod.info("Loading existing RNG data from {}", dataPath.toAbsolutePath())
                 val content = Files.readString(dataPath)
                 val data = json.decodeFromString<PlayerRngData>(content)
-                DyeTrackerMod.info("RNG data loaded: {} dungeon meters", data.dungeonMeters.size)
+                DyeTrackerMod.info("RNG data loaded")
                 data
             } else {
                 DyeTrackerMod.info("No existing RNG data file found at {}", dataPath.toAbsolutePath())

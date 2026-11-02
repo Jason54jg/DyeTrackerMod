@@ -55,7 +55,8 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: DyeTracker ${{ steps.version.outputs.tag }}
           draft: false
-          prerelease: false
+          # A tag with a pre-release suffix (e.g. v1.11.0-beta.1) publishes as a GitHub pre-release.
+          prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
           files: |
             versions/*/build/libs/dyetracker-*[!-sources].jar
           generate_release_notes: true

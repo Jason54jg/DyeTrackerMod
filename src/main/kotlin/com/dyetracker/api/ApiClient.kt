@@ -173,13 +173,15 @@ object ApiClient {
 
         // Build the request body using proper JSON encoding
         val requestBody = SyncRngDataRequest(
-            dungeonMeters = data.dungeonMeters,
-            nucleusMeter = data.nucleusMeter,
-            experimentationMeter = data.experimentationMeter,
             mineshaftPity = data.mineshaftPity,
             archfiendDye = data.archfiendDye,
             copperDye = data.copperDye,
             nyanzaDye = data.nyanzaDye,
+            treasureDye = data.treasureDye,
+            fossilDye = data.fossilDye,
+            darkPurpleDye = data.darkPurpleDye,
+            hollyDye = data.hollyDye,
+            mochaDye = data.mochaDye,
             modTimestamp = System.currentTimeMillis()
         )
         val body = json.encodeToString(requestBody)

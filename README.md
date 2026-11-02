@@ -8,6 +8,21 @@ A Fabric mod for Minecraft that integrates with the [DyeTracker](https://dyetrac
 - Automatically sync your player stats with the website
 - No API keys or passwords required - uses Minecraft's built-in authentication
 
+### Dyes the mod counts for you
+
+Some dyes depend on things the Hypixel API doesn't record. For these, the mod counts the attempts while you play and syncs the totals to your DyeTracker profile:
+
+| Dye | What the mod counts |
+|-----|---------------------|
+| Fossil | Suspicious Scraps you excavate (one per `EXCAVATION COMPLETE` message) |
+| Dark Purple | Dark Auctions you attend (one per `Transferring to Dark Auction...` message) |
+| Holly | Gifts you give or open (one per gift reward message, by rarity and reward) |
+| Mocha | Potions you take out of a Brewing Stand after they finish brewing, by tier (I to VIII) |
+
+- **Counting starts when you install the mod.** Excavations, auctions, gifts and potions from before that can't be counted.
+- Gift messages look the same for Red, Green and White Gifts, so the website estimates how many of your gifts were red from the rewards you got.
+- Run `/dyetracker show` to see your current counts in game.
+
 ## Requirements
 
 - Minecraft **1.21.10** or **1.21.11** (a separate mod jar is published for each — see [Installation](#installation))
@@ -118,6 +133,7 @@ The mod stores its configuration in `.minecraft/config/dyetracker.json`. This in
 | Username | Account linking | DyeTracker API |
 | UUID | Account identification | DyeTracker API |
 | Session Token | Prove account ownership | Mojang only (never DyeTracker) |
+| Dye counts (excavations, Dark Auctions, gift rewards, potions brewed) | Dye progress on the website | DyeTracker API |
 
 Your Minecraft session token is **never** sent to DyeTracker servers - only to Mojang's official authentication servers.
 
